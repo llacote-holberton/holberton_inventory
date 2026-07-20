@@ -21,6 +21,23 @@ docker ps \
   > logs__list-of-active-docker-containers_post_start.log
 docker logs hb_inv__db_poc > logs__spawned-container-inner-logs.log
 
+# Small IA-generated script to have a confirmation when MariaDB is ready;
+# using inner container utility mariadb-admin (which, without arguments, just displays health check)
+echo "Waiting for MariaDB..."
+until docker exec hb_inv__db_poc mariadb-admin \
+    -uroot \
+    -pH0lb3rt0n \
+    ping --silent >/dev/null 2>&1
+do
+    sleep 1
+done
+echo "MariaDB is ready."
+
+
+
+
+
+
 # COMMENTED VERSION
 # docker run -d \
 # "Custom name" for that container
