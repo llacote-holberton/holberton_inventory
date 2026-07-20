@@ -1,0 +1,5 @@
+# Ignore files related to this POC which are always contextual to setup/run
+# Log files from trying the spawn script
+*.log
+# Python version for local python environment
+.python-version
