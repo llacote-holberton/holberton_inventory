@@ -1,4 +1,12 @@
 #!/bin/bash
+
+CONTAINER_NAME="hb_inv__db_poc"
+if docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
+    echo "Container already exists."
+    docker start "$CONTAINER_NAME"
+    exit 0
+fi
+
 docker run -d \
   --name hb_inv__db_poc \
   -e MARIADB_ROOT_PASSWORD='H0lb3rt0n' \
