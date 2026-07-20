@@ -16,7 +16,9 @@ docker run -d \
   -v "$(pwd)/init:/docker-entrypoint-initdb.d" \
   mariadb:lts
 
-docker ps > logs__list-of-active-docker-containers_post_start.log
+docker ps \
+  --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}\t{{.Ports}}' \
+  > logs__list-of-active-docker-containers_post_start.log
 docker logs hb_inv__db_poc > logs__spawned-container-inner-logs.log
 
 # COMMENTED VERSION
