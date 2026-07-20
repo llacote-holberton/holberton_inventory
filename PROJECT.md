@@ -1,6 +1,6 @@
 # Project Overview
 
-<details><summary></summary>
+<details><summary>Read project context</summary>
 
 ## Introduction
 
@@ -275,22 +275,22 @@ This structure is only a suggestion. You may use a different organization if you
 
 </details>
 
+# Tasks details
 
-
-# Tasks details - 0. Architecture and Planning
+## 0. Architecture and Planning
 
 <details>
 
-## Goal
+### Goal
 
 Define the architecture of your system before implementing features.
 
 Your team must identify the services, responsibilities, data flow, and main technical decisions.
 
 
-## Tasks
+### Tasks
 
-### 1 - Define the System Architecture
+#### 1 - Define the System Architecture
 
 Create an architecture document that explains:
 
@@ -307,7 +307,7 @@ Do not write implementation code for this task.
 
 ---
 
-### 2 - Choose Communication Strategies
+#### 2 - Choose Communication Strategies
 
 Decide:
 
@@ -325,7 +325,7 @@ You are not expected to choose the most complex option. You are expected to choo
 
 ---
 
-### 3 - Define the Minimum Viable Product
+#### 3 - Define the Minimum Viable Product
 
 Define your MVP.
 
@@ -339,7 +339,7 @@ List:
 
 This task is important. A clear MVP reduces the risk of incomplete integration at the end of the project.
 
-## Expected Deliverables
+### Expected Deliverables
 
 - Architecture document.
 - Initial service diagram.
@@ -348,17 +348,17 @@ This task is important. A clear MVP reduces the risk of incomplete integration a
 
 </details>
 
-# Task details - 1. Database Design and Backoffice Foundation
+## 1. Database Design and Backoffice Foundation
 
 <details>
 
-## Goal
+### Goal
 
 Design the relational database and implement the foundation of the Backoffice service.
 
-## Tasks
+### Tasks
 
-### 1 - Design the Database Schema
+#### 1 - Design the Database Schema
 
 Design a relational schema for the Backoffice database.
 
@@ -390,7 +390,7 @@ Do not add tables only because they seem realistic. Add them only if they suppor
 
 ---
 
-### 2 - Implement SQLAlchemy Models
+#### 2 - Implement SQLAlchemy Models
 
 Implement SQLAlchemy models based on your schema.
 
@@ -404,7 +404,7 @@ Your implementation should avoid duplicating product data from the Product API.
 
 ---
 
-### 3 - Create Initial Data
+#### 3 - Create Initial Data
 
 Create a reliable way to initialize the system with basic data.
 
@@ -420,7 +420,7 @@ Do not hardcode plain-text passwords into the database.
 
 ---
 
-### 4 - Validate Stock Rules
+#### 4 - Validate Stock Rules
 
 Implement validation rules to ensure:
 
@@ -431,7 +431,7 @@ Implement validation rules to ensure:
 
 You may decide where to place this validation, but you must be able to explain your decision.
 
-## Expected Deliverables
+### Expected Deliverables
 
 - Database schema documentation.
 - SQLAlchemy models.
@@ -441,17 +441,17 @@ You may decide where to place this validation, but you must be able to explain y
 </details>
 
 
-# Task details - 2. Backoffice Authentication and Authorization
+## 2. Backoffice Authentication and Authorization
 
 <details>
 
-## Goal
+### Goal
 
 Implement secure access control for the Backoffice.
 
-## Tasks
+### Tasks
 
-### 1 - Implement User Authentication
+#### 1 - Implement User Authentication
 
 Implement login functionality for Backoffice users.
 
@@ -468,7 +468,7 @@ You must justify your choice.
 
 ---
 
-### 2 - Store Passwords Securely
+#### 2 - Store Passwords Securely
 
 Implement password hashing.
 
@@ -489,7 +489,7 @@ You must document:
 
 ---
 
-### 3 - Implement Role-Based Authorization
+#### 3 - Implement Role-Based Authorization
 
 Implement authorization rules for:
 
@@ -505,7 +505,7 @@ Your backend must enforce that:
 
 Do not rely only on hiding buttons in the interface. Authorization must be enforced in backend logic.
 
-## Expected Deliverables
+### Expected Deliverables
 
 - Login functionality.
 - Secure password handling.
@@ -515,17 +515,17 @@ Do not rely only on hiding buttons in the interface. Authorization must be enfor
 </details>
 
 
-# Task details - 3. Backoffice Functionalities
+## 3. Backoffice Functionalities
 
 <details>
 
-## Goal
+### Goal
 
 Implement the operational Backoffice features for both user types.
 
-## Tasks
+### Tasks
 
-### 1 - Common User Stock Operations
+#### 1 - Common User Stock Operations
 
 Implement the stock operations available to common users.
 
@@ -542,7 +542,7 @@ The backend must prevent operations on other branches.
 
 ---
 
-### 2 - Admin User Management
+#### 2 - Admin User Management
 
 Implement admin operations.
 
@@ -562,7 +562,7 @@ When a user is soft-deleted:
 
 ---
 
-### 3 - Product API Integration in Backoffice
+#### 3 - Product API Integration in Backoffice
 
 Integrate the provided **Product API** where needed.
 
@@ -578,7 +578,7 @@ The important requirement is that product details come from the external API, no
 
 ---
 
-### 4 - Backoffice Interface
+#### 4 - Backoffice Interface
 
 Implement the Backoffice interface using one of the following approaches:
 
@@ -589,7 +589,7 @@ Your interface should be simple, functional, and clear.
 
 You must not prioritize visual complexity over correctness, validation, and authorization.
 
-## Expected Deliverables
+### Expected Deliverables
 
 - Working common-user stock operations.
 - Working admin user-management operations.
@@ -600,17 +600,17 @@ You must not prioritize visual complexity over correctness, validation, and auth
 </details>
 
 
-# Task details - 4. Product MCP Server
+## 4. Product MCP Server
 
 <details>
 
-## Goal
+### Goal
 
 Implement an MCP server that allows the AI system to access the external Product API through tools.
 
-## Tasks
+### Tasks
 
-### 1 - Define MCP Tools
+#### 1 - Define MCP Tools
 
 Define the tools your MCP server will expose.
 
@@ -625,7 +625,7 @@ Avoid exposing unnecessary Product API behavior.
 
 ---
 
-### 2 - Implement Product API Communication
+#### 2 - Implement Product API Communication
 
 Implement communication between your MCP server and the provided Product API.
 
@@ -640,7 +640,7 @@ The MCP server should not silently fail. It should return clear error informatio
 
 ---
 
-### 3 - Test MCP Tools Manually
+#### 3 - Test MCP Tools Manually
 
 Before connecting the AI agent, test your MCP server manually.
 
@@ -651,7 +651,7 @@ Verify that:
 - Invalid product identifiers are handled correctly.
 - Product API failures are handled clearly.
 
-## Expected Deliverables
+### Expected Deliverables
 
 - Product MCP server implementation.
 - Tool definitions.
@@ -661,17 +661,17 @@ Verify that:
 </details>
 
 
-# Task details - 5. AI Query Service
+## 5. AI Query Service
 
 <details>
 
-## Goal
+### Goal
 
 Build an independent backend service that receives user questions, uses AI agents and tools, and returns grounded answers.
 
-## Tasks
+### Tasks
 
-### 1 - Define Supported Question Types
+#### 1 - Define Supported Question Types
 
 Define the question types your AI service will support.
 
@@ -688,7 +688,7 @@ Your system should respond clearly when a question is outside the supported scop
 
 ---
 
-### 2 - Connect the Agent to Product Tools
+#### 2 - Connect the Agent to Product Tools
 
 Connect your AI agent to the Product MCP Server.
 
@@ -698,7 +698,7 @@ Your implementation should make it possible to observe or debug which tool calls
 
 ---
 
-### 3 - Provide Stock Access to the Agent
+#### 3 - Provide Stock Access to the Agent
 
 Decide how the AI service will access stock information.
 
@@ -718,7 +718,7 @@ At minimum, the AI service must be able to obtain:
 
 ---
 
-### 4 - Generate Grounded Responses
+#### 4 - Generate Grounded Responses
 
 The AI service must generate responses based on actual data.
 
@@ -735,7 +735,7 @@ Your team should consider how to include enough information in the agent context
 
 ---
 
-### 5 - Expose the AI Query Endpoint
+#### 5 - Expose the AI Query Endpoint
 
 Expose an endpoint for the Client Web Interface.
 
@@ -748,7 +748,7 @@ Your endpoint must receive a user question and return an answer.
 
 Since conversation history is not required, each request may be treated independently.
 
-## Expected Deliverables
+### Expected Deliverables
 
 - AI Query Service.
 - Agent integration with product tools.
@@ -758,17 +758,17 @@ Since conversation history is not required, each request may be treated independ
 
 </details>
 
-# Task details - 6. Client Web Interface
+## 6. Client Web Interface
 
 <details>
 
-## Goal
+### Goal
 
 Build a simple public web interface where users can ask natural-language questions about products and stock.
 
-## Tasks
+### Tasks
 
-### 1 - Build the Basic Interface
+#### 1 - Build the Basic Interface
 
 Create a simple page with:
 
@@ -785,7 +785,7 @@ The interface does not require authentication.
 
 ---
 
-### 2 - Connect the Interface to the AI Query Service
+#### 2 - Connect the Interface to the AI Query Service
 
 Connect the page to your AI Query Service using your chosen communication strategy.
 
@@ -798,7 +798,7 @@ The page should:
 
 ---
 
-### 3 - Validate the User Experience
+#### 3 - Validate the User Experience
 
 Test the interface with realistic questions.
 
@@ -811,7 +811,7 @@ Use examples such as:
 
 The user experience should be simple but understandable.
 
-## Expected Deliverables
+### Expected Deliverables
 
 - Functional public client page.
 - Connection to AI Query Service.
@@ -820,17 +820,17 @@ The user experience should be simple but understandable.
 
 </details>
 
-# Task details - 7. Integration, Testing, and Documentation
+## 7. Integration, Testing, and Documentation
 
 <details>
 
-## Goal
+### Goal
 
 Integrate all components into a coherent system and prepare the final delivery.
 
-## Tasks
+### Tasks
 
-### 1 - Integrate the Complete Flow
+#### 1 - Integrate the Complete Flow
 
 Verify the complete system flow:
 
@@ -847,7 +847,7 @@ Do not leave integration for the final day.
 
 ---
 
-### 2 - Test Critical Scenarios
+#### 2 - Test Critical Scenarios
 
 Test at least the following scenarios:
 
@@ -871,7 +871,7 @@ Automated tests are strongly recommended for critical backend logic.
 
 ---
 
-### 3 - Write the README
+#### 3 - Write the README
 
 Your README must include:
 
@@ -891,7 +891,7 @@ The README must be sufficient for a mentor to run and evaluate your project.
 
 ---
 
-### 4 - Prepare the Final Presentation
+#### 4 - Prepare the Final Presentation
 
 Prepare a final presentation explaining:
 
@@ -906,7 +906,7 @@ Prepare a final presentation explaining:
 
 The presentation should include a live or recorded demonstration.
 
-## Expected Deliverables
+### Expected Deliverables
 
 - Integrated application.
 - README.
@@ -916,26 +916,4 @@ The presentation should include a live or recorded demonstration.
 
 </details>
 
-
-
-
-
-
-
-
-# Task details - 
-
-<details></details>
-
-# Task details - 
-
-<details></details>
-
-# Task details - 
-
-<details></details>
-
-# Task details - 
-
-<details></details>
 
