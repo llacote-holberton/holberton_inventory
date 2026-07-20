@@ -3,3 +3,5 @@
 *.log
 # Python version for local python environment
 .python-version
+# Folder holding the local volume for MariaDB container
+data/mariadb
