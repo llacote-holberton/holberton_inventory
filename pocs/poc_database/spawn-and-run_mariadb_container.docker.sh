@@ -5,6 +5,7 @@ docker run -d \
   -e MARIADB_DATABASE='holberton_inventory' \
   -p 3306:3306 \
   -v "$(pwd)/data/mariadb/:/var/lib/mysql" \
+  -v "$(pwd)/init:/docker-entrypoint-initdb.d" \
   mariadb:lts
 
 docker ps > logs__list-of-active-docker-containers_post_start.log
