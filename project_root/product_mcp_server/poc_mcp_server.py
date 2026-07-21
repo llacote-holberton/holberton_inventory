@@ -1,23 +1,25 @@
+# product_mcp_server_http.py
 from fastmcp import FastMCP
 
 # Initialisation du serveur
-mcp = FastMCP("ProductInventoryServer")
+mcp = FastMCP("ProductCatalogServer")
 
-# Simulation de l'API externe Produit
-PRODUCTS = {
-    "P100": {"name": "Clavier", "price": 90.00, "category": "Tech"},
-    "P200": {"name": "Souris", "price": 45.00, "category": "Tech"},
+# Simulation de la base/API Produit
+MOCK_PRODUCTS = {
+    "P100": {"name": "Clavier Mécanique", "price": 89.99, "category": "Tech"},
+    "P200": {"name": "Souris Sans Fil", "price": 45.00, "category": "Tech"},
 }
 
 @mcp.tool()
 def list_products() -> list[dict]:
-    """liste des identifiants et noms des produits disponibles."""
-    return [{"id": k, "name": v["name"]} for k, v in PRODUCTS.items()]
+    """Retourne la liste complète des identifiants et noms des produits disponibles."""
+    return [{"id": k, "name": v["name"]} for k, v in MOCK_PRODUCTS.items()]
 
 @mcp.tool()
 def get_product_details(product_id: str) -> dict:
-    """détails complets d'un produit à partir de son ID."""
-    return PRODUCTS.get(product_id, {"error": "Produit introuvable"})
+    """Retourne les détails complets d'un produit (nom, prix, catégorie) à partir de son ID."""
+    return MOCK_PRODUCTS.get(product_id, {"error": "Produit introuvable"})
 
 if __name__ == "__main__":
-    mcp.run()
+    # Lancement du serveur en mode HTTP / SSE sur le port 8000
+    mcp.run(transport="sse", host="0.0.0.0", port=8000)
