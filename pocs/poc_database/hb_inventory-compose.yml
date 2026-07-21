@@ -1,0 +1,31 @@
+# Docker composition to set up Holberton Inventory application
+# BEWARE: YAML requires strict respect of indentation, 1 level = 2 spaces
+# Name: explicit prefix added to all services/volumes names otherwise docker
+#   would use an ASCII version of the folder in which the current file is located.
+name: poc_
+services:
+  hb_inv__db_service:
+    # Premade "base"
+    image: mariadb:latest
+    environment:
+      - MARIADB_DATABASE='holberton_inventory'
+      - MARIADB_ROOT_PASSWORD='H0lb3rt0n'
+    ports:
+      - "3306:3306"
+    volumes:
+      - hb_inv__db_data:/var/lib/mysql
+      # ${PWD} is automatically converted as "absolute path of current configuration file"
+      # WARNING having the "init" at the same level OR adjust path here! 
+      - ${PWD}/init:/docker-entrypoint-initdb.d
+
+volumes:
+  hb_inv__db_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      # ${PWD} is automatically converted as "absolute path of current configuration file"
+      # => BEWARE of having the file put at the "right level" of project.
+      # WARNING: target folder MUST PREEXIST as "named volumes" are incompatible with
+      #   "automatic creation if not exists"
+      device: ${PWD}/data/mariadb
