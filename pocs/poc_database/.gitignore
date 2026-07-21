@@ -5,3 +5,5 @@
 .python-version
 # Folder holding the local volume for MariaDB container
 data/mariadb
+# Ignoring Kate text editor temporary files
+*.kate-swp
