@@ -22,3 +22,23 @@ CREATE TABLE IF NOT EXISTS users
     is_active BOOLEAN NOT NULL
 );
 
+-- ----------------------------------------
+-- Task 1: (re)creating branchs table
+-- ----------------------------------------
+
+SELECT '--- Forcefully (re)creating the branchs table ---' AS [LOG];
+
+DROP TABLE IF EXISTS branchs;
+-- Keeping "if not exists" to easily change the script mode by just removing above line.
+CREATE TABLE IF NOT EXISTS branchs
+(   -- BEWARE difference of syntax (for SQLite it's AUTOINCREMENT without _)
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    label VARCHAR(50) NOT NULL UNIQUE,
+);
+
+-- ----------------------------------------
+-- Task 3: Adding constraints of foreign keys on tables
+-- ----------------------------------------
+ALTER TABLE users
+    ADD CONSTRAINT fk_users_branches
+    FOREIGN KEY (branch_id) REFERENCES branches(id);
