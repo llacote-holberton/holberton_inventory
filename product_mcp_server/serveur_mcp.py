@@ -8,6 +8,7 @@ mcp = FastMCP(
     instructions="Fournit des outils pour consulter le catalogue produits et les stocks en magasin."
 )
 
+
 @mcp.tool()
 async def list_products() -> list[dict]:
     """
@@ -15,6 +16,7 @@ async def list_products() -> list[dict]:
     Retourne l'ID, le nom et le prix de chaque produit.
     """
     return await fetch_all_products()
+
 
 @mcp.tool()
 async def get_product_info(product_id: str) -> dict:
@@ -26,6 +28,7 @@ async def get_product_info(product_id: str) -> dict:
         return {"error": f"Produit avec l'ID '{product_id}' introuvable."}
     return details
 
+
 @mcp.tool()
 def check_product_stock_across_branches(product_id: str) -> list[dict]:
     """
@@ -35,6 +38,7 @@ def check_product_stock_across_branches(product_id: str) -> list[dict]:
     if not stocks:
         return [{"message": f"Aucun stock trouvé pour le produit {product_id}."}]
     return stocks
+
 
 @mcp.tool()
 def list_branch_inventory(branch_name: str) -> list[dict]:
