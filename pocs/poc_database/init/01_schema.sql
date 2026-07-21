@@ -1,39 +1,36 @@
--- Displaying information messages with "universal method"
-SELECT '===== Holberton Inventory: (re)Creating tables =====' AS [LOG];
-SELECT '  Entities: User, Branch, Stock' AS [LOG];
+-- Displaying information messages
+SELECT '===== Holberton Inventory: (re)Creating tables =====' AS log;
+SELECT '   Entities: User, Branch, Stock' AS log;
 
 -- ----------------------------------------
 -- Task 0: (re)creating users table
 -- ----------------------------------------
-SELECT '--- Forcefully (re)creating the users table ---' AS [LOG];
+SELECT '--- Forcefully (re)creating the users table ---' AS log;
 
 DROP TABLE IF EXISTS users;
--- Keeping "if not exists" to easily change the script mode by just removing above line.
+
 CREATE TABLE IF NOT EXISTS users
-(   -- BEWARE difference of syntax (for SQLite it's AUTOINCREMENT without _)
+(
     id INTEGER PRIMARY KEY AUTO_INCREMENT,
-    -- NOTE: Varchar much better than char but mariadb REQUIRES a given limit for varchar
     user_name VARCHAR(30) NOT NULL UNIQUE,
-    -- Max size because hash are usually big
     password_hash VARCHAR(255),
-    -- We know we wille only 'use' two roles so can restrain directly here.
     user_role VARCHAR(15) NOT NULL CHECK (user_role IN ('admin', 'manager')),
     branch_id INTEGER,
     is_active BOOLEAN NOT NULL
+    -- OPTIONAL in real project: created_at and updated_at
 );
 
 -- ----------------------------------------
--- Task 1: (re)creating branchs table
+-- Task 1: (re)creating branches table
 -- ----------------------------------------
+SELECT '--- Forcefully (re)creating the branches table ---' AS log;
 
-SELECT '--- Forcefully (re)creating the branchs table ---' AS [LOG];
+DROP TABLE IF EXISTS branches;
 
-DROP TABLE IF EXISTS branchs;
--- Keeping "if not exists" to easily change the script mode by just removing above line.
-CREATE TABLE IF NOT EXISTS branchs
-(   -- BEWARE difference of syntax (for SQLite it's AUTOINCREMENT without _)
+CREATE TABLE IF NOT EXISTS branches
+(
     id INTEGER PRIMARY KEY AUTO_INCREMENT,
-    label VARCHAR(50) NOT NULL UNIQUE,
+    label VARCHAR(50) NOT NULL UNIQUE
 );
 
 -- ----------------------------------------
