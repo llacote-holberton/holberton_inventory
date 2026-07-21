@@ -1,0 +1,16 @@
+name: poc_integration_external_container
+services:
+  products-details-api:
+    # "Delegates" the "pick image" part to a process using a DockerFile
+    #    inside a folder to "construct an image following specific instructions"
+    build:
+      # Keyword used to specify the "source" (folder, archive, git repo, local path...)
+      #   from which find, read and process the Dockerfile.
+      context: https://github.com/hbtn-edu/hbntory-products-api.git#main
+# URL du dépôt Git avec la branche/tag/commit souhaité après le '#'
+    container_name: hb_inv__products_api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    # depends_on:
+    #  - hb_inv__db_service
