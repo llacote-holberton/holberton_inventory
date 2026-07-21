@@ -11,12 +11,12 @@ PRODUCTS = {
 
 @mcp.tool()
 def list_products() -> list[dict]:
-    """Retourne la liste des identifiants et noms des produits disponibles."""
+    """liste des identifiants et noms des produits disponibles."""
     return [{"id": k, "name": v["name"]} for k, v in PRODUCTS.items()]
 
 @mcp.tool()
 def get_product_details(product_id: str) -> dict:
-    """Retourne les détails complets d'un produit (nom, prix, catégorie) à partir de son ID."""
+    """détails complets d'un produit à partir de son ID."""
     return PRODUCTS.get(product_id, {"error": "Produit introuvable"})
 
 if __name__ == "__main__":
