@@ -7,12 +7,22 @@ if docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
     exit 0
 fi
 
+# Creating a named volume to ease up cleanup
+MARIADB_VOLUME_PATH="$(pwd)/data/mariadb"
+mkdir -p $MARIADB_VOLUME_PATH
+docker volume create \
+  --driver local \
+  --opt type=none \
+  --opt o=bind \
+  --opt device="$MARIADB_VOLUME_PATH" \
+  hb_inv__db_data
+
 docker run -d \
   --name hb_inv__db_poc \
   -e MARIADB_ROOT_PASSWORD='H0lb3rt0n' \
   -e MARIADB_DATABASE='holberton_inventory' \
   -p 3306:3306 \
-  -v "$(pwd)/data/mariadb/:/var/lib/mysql" \
+  -v hb_inv__db_data:/var/lib/mysql \
   -v "$(pwd)/init:/docker-entrypoint-initdb.d" \
   mariadb:lts
 
