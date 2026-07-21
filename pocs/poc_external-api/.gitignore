@@ -1,0 +1,5 @@
+# Python's local environment files
+.python-version
+
+# Kate editor temp files
+.kate-swp
