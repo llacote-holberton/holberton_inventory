@@ -8,8 +8,8 @@ services:
     # Premade "base"
     image: mariadb:latest
     environment:
-      - MARIADB_DATABASE='holberton_inventory'
-      - MARIADB_ROOT_PASSWORD='H0lb3rt0n'
+      - MARIADB_DATABASE=holberton_inventory
+      - MARIADB_ROOT_PASSWORD=H0lb3rt0n
     ports:
       - "3306:3306"
     volumes:
