@@ -93,4 +93,4 @@ async def handle_query(payload: QueryRequest):
 if __name__ == "__main__":
     import uvicorn
     # Lancement du service IA sur le port 8001
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8002)
