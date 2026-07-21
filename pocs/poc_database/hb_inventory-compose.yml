@@ -2,6 +2,8 @@
 # BEWARE: YAML requires strict respect of indentation, 1 level = 2 spaces
 # Name: explicit prefix added to all services/volumes names otherwise docker
 #   would use an ASCII version of the folder in which the current file is located.
+# To start: from same folder as file use compose -f hb_inventory-compose.yml up -d
+# To stop and clean, from same folder:   compose -f hb_inventory-compose.yml down -v
 name: poc_
 services:
   hb_inv__db_service:
@@ -17,6 +19,24 @@ services:
       # ${PWD} is automatically converted as "absolute path of current configuration file"
       # WARNING having the "init" at the same level OR adjust path here! 
       - ${PWD}/init:/docker-entrypoint-initdb.d
+
+
+  hb_inv__external-api:
+    # Builds container from code fetched on the fly from git
+    build:
+      context: https://github.com/hbtn-edu/hbntory-products-api.git#08497b1263a39aaddaf43a405722cbe93fc25b78
+      # Targeting specific commit for stability over time, needs FULL HASH
+    # WARNING: EXPLICIT IMAGE NAME REQUIRED when name prefix ends with a _ to avoid message
+    # unable to get image 'poc_-hb_inv__external-api': Error response from daemon: invalid reference format
+    image: hb_inv_products_api:latest
+    container_name: hb_inv__products_api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    # Actually doesn't depend on it, but leaving so I have an example reference for syntax.
+    # depends_on:
+    #  - hb_inv__db_service
+
 
 volumes:
   hb_inv__db_data:
