@@ -1,0 +1,6 @@
+# Most basic docker compose possible
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "8080:80"
