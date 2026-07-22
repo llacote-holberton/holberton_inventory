@@ -17,6 +17,16 @@ services:
       - stock_db_data:/var/lib/mysql
       - ${PWD}/init:/docker-entrypoint-initdb.d
 
+  # Exposes detailed information for all products potentially available in company's stores
+  products_api:
+    build:
+      context: https://github.com/hbtn-edu/hbntory-products-api.git#08497b1263a39aaddaf43a405722cbe93fc25b78
+    image: hbntory_products_api:latest
+    container_name: hbntory_products_api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+
 volumes:
   stock_db_data:
     # driver: local
