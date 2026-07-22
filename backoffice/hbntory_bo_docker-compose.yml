@@ -11,9 +11,9 @@ services:
     container_name: hbntory-stock-db-service # Mandatory to avoid -n suffix for scaling
     environment:
       - MARIADB_DATABASE=holberton_inventory
-      - MARIADB_ROOT_PASSWORD=H0lb3rt0n
+      - MARIADB_ROOT_PASSWORD=${DB_PASSWORD}
     ports:
-      - "3306:3306"
+      - "${DB_PORT}:3306"
     volumes:
       - stock_db_data:/var/lib/mysql
       - ${PWD}/init:/docker-entrypoint-initdb.d
