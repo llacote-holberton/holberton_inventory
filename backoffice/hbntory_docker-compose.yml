@@ -1,0 +1,26 @@
+# Docker composition orchestrating several containers to set up an inventory management application
+# Lancement : docker compose -f hbntory_docker-compose.yml up -d
+# Arrêt     : docker compose -f hbntory_docker-compose.yml down -v
+
+name: hbntory
+
+services:
+  # Holds the data pertaining quantities of products per store.
+  stock_db_service:
+    image: mariadb:latest
+    environment:
+      - MARIADB_DATABASE=holberton_inventory
+      - MARIADB_ROOT_PASSWORD=H0lb3rt0n
+    ports:
+      - "3306:3306"
+    volumes:
+      - stock_db_data:/var/lib/mysql
+      - ${PWD}/init:/docker-entrypoint-initdb.d
+
+volumes:
+  stock_db_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/stock_db_data
