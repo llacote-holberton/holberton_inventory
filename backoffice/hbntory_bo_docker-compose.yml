@@ -1,6 +1,6 @@
 # Docker composition orchestrating several containers to set up an inventory management application
-# Lancement : docker compose -f hbntory_docker-compose.yml up -d
-# Arrêt     : docker compose -f hbntory_docker-compose.yml down -v
+# Lancement : docker compose -f hbntory_bo_docker-compose.yml up -d
+# Arrêt     : docker compose -f hbntory_bo_docker-compose.yml down -v
 
 name: hbntory
 
