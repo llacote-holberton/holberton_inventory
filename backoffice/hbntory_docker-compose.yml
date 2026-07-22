@@ -6,8 +6,9 @@ name: hbntory
 
 services:
   # Holds the data pertaining quantities of products per store.
-  stock_db_service:
+  stock-db-service:
     image: mariadb:latest
+    container_name: hbntory-stock-db-service # Mandatory to avoid -n suffix for scaling
     environment:
       - MARIADB_DATABASE=holberton_inventory
       - MARIADB_ROOT_PASSWORD=H0lb3rt0n
@@ -18,11 +19,11 @@ services:
       - ${PWD}/init:/docker-entrypoint-initdb.d
 
   # Exposes detailed information for all products potentially available in company's stores
-  products_api:
+  products-api:
     build:
       context: https://github.com/hbtn-edu/hbntory-products-api.git#08497b1263a39aaddaf43a405722cbe93fc25b78
     image: hbntory_products_api:latest
-    container_name: hbntory_products_api
+    container_name: hbntory-products-api
     restart: unless-stopped
     ports:
       - "5000:5000"
