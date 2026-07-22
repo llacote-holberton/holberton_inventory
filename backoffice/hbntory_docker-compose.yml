@@ -19,8 +19,19 @@ services:
 
 volumes:
   stock_db_data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${PWD}/stock_db_data
+    # driver: local
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: ${PWD}/stock_db_data
+
+    # Using an explicit bind mount causes potential problems as the files/folder created for db data
+    #   are created "on host filesystem" BUT with inner mariadb user (999).
+    # To avoid this we would need to use a custom DockerFile for mariadb container just to set its uid/guid
+    # FROM mariadb:latest
+    # RUN usermod -u 1000 mysql && groupmod -g 1000 mysql
+    # As apaprently this approach does not even provides benefit for data save/recovery strategy let's drop it.
+
+    # Good practice to save is to trigger a dump inside the container but have it redirected to a host file.
+    # docker exec hbntory_db mariadb-dump -u root -pH0lb3rt0n holberton_inventory \
+    #   > /chemin/vers/nos_backups/backup_$(date +%Y%m%d).sql

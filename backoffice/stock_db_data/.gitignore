@@ -1,6 +1,0 @@
-# 1. Ignore all files inside this directory...
-*
-
-# 2. Except those two!
-!README.md
-!.gitignore
