@@ -57,7 +57,8 @@ CREATE TABLE IF NOT EXISTS stocks
     quantity   INT NOT NULL DEFAULT 0,
     -- Primary Key is logically the combination of the branch and product
     PRIMARY KEY (branch_id, product_id),
-    CONSTRAINT fk_branch FOREIGN KEY (branch_id) REFERENCES branches(id)
+    CONSTRAINT fk_branch FOREIGN KEY (branch_id) REFERENCES branches(id),
+    CONSTRAINT chk_quantity_positive CHECK (quantity >= 0)
 );
 
 -- And its related indexes
