@@ -12,7 +12,7 @@ from sqlalchemy.orm import mapped_column    # Required to "configure" a column
 # "SQL Data types"
 from sqlalchemy import String
 # SQL Constraints
-from sqlalchemy import ForeignKey, PrimaryKeyConstraint
+from sqlalchemy import ForeignKey, PrimaryKeyConstraint, CheckConstraint, Index
 
 
 class Base(DeclarativeBase):
@@ -30,9 +30,10 @@ class Branch(Base):
 class Stock(Base):
     """Defines model for branches's stocks"""
     __tablename__ = "stocks"
+    quantity: Mapped[int] = mapped_column(default=0)
     # Reminder: "just the type" implies "NOT NULL" (otherwise [int | None])
     branch_id: Mapped[int] = mapped_column(ForeignKey("branches.id"))
-    product_id: Mapped[int]
+    product_id: Mapped[int]  # For autonamed index: mapped_column(index=True)
     # NOTE: could also define "combined primary key" by just directly adding
     #  'primary_key=True' as another option of mapped_column() in both columns
     #  ex product_id: Mapped[int] = mapped_column(default=0, primary_key=True)
@@ -41,4 +42,6 @@ class Stock(Base):
     #   lets dev choose which to use whatever happens.
     __table_args__ = (
         PrimaryKeyConstraint("product_id", "branch_id"),
+        CheckConstraint("quantity >=0", name="positive_stock"),
+        Index("idx_stocks_by_pid", "product_id"),  # Explicit index name
     )
