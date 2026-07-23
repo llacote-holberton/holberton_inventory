@@ -1,36 +1,3 @@
-"""
-Product MCP Server
--------------------
-Ce serveur MCP expose des "tools" (outils) que l'agent IA peut appeler.
-Il ne stocke aucune donnée lui-même : il fait uniquement le pont vers :
-  - l'API Produit externe fournie par l'école (lecture seule, conteneur
-    Docker du pack de ressources : http://localhost:5001 en accès direct,
-    http://external-products-api:5000 depuis un autre conteneur du même
-    réseau Compose)
-  - l'API interne du Backoffice pour lire le stock (lecture seule aussi)
-
-Choix d'architecture pour le stock :
-On appelle un endpoint REST du Backoffice plutôt que de se connecter
-directement à la base de données depuis ce service. Raisons :
-  1. Le Backoffice reste le seul "propriétaire" de la logique métier sur le
-     stock (une seule source de vérité, un seul endroit où les règles
-     changent) — l'API Produit externe ne connaît QUE le catalogue, jamais
-     les quantités en stock (c'est explicite dans son contrat).
-  2. On évite de dupliquer les modèles SQLAlchemy dans deux services
-     différents (product_mcp_server et backoffice).
-  3. Ce service n'a jamais d'accès direct à la base de données.
-
-Gestion des erreurs :
-On distingue deux types d'erreurs, avec des messages différents, pour que
-l'agent IA sache CE QU'IL DOIT dire à l'utilisateur :
-  - ProductNotFoundError : le produit n'existe pas (statut 404).
-  - ProductAPIError : l'API est injoignable, en panne simulée
-    (force_error=true côté API Produit) ou renvoie une erreur serveur.
-FastMCP transforme automatiquement une exception levée dans un tool en un
-résultat marqué isError=True, avec le message de l'exception comme
-contenu : le serveur ne "silent-fail" donc jamais.
-"""
-
 import os
 import httpx
 from pydantic import BaseModel
@@ -43,7 +10,7 @@ from mcp.server.fastmcp import FastMCP
 PRODUCT_API_URL = os.getenv("PRODUCT_API_URL", "http://localhost:5001")
 BACKOFFICE_API_URL = os.getenv("BACKOFFICE_API_URL", "http://localhost:8000")
 
-mcp = FastMCP("product-mcp-server", host="127.0.0.1", port=8001)
+mcp = FastMCP("product-mcp-server", host="127.0.0.1",)
 
 
 # --------------------------------------------------------------------------
