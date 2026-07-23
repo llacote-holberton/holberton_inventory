@@ -40,4 +40,9 @@ with Session(engine) as session:
 
     print("\n=== STOCKS ===")
     for stock in session.scalars(select(Stock)):
-        print(f"Branch ID: {stock.branch_id} | Product ID: {stock.product_id}")
+        stock_info = " | ".join([
+            f"Branch ID: {stock.branch_id}",
+            f"Product ID: {stock.branch_id}",
+            f"Current stock: {stock.quantity}",
+        ])
+        print(stock_info)
