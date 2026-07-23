@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users
     id INTEGER PRIMARY KEY AUTO_INCREMENT,
     user_name VARCHAR(30) NOT NULL UNIQUE,
     password_hash VARCHAR(255),
-    user_role VARCHAR(15) NOT NULL DEFAULT 'manager' CHECK (user_role IN ('admin', 'manager')),
+    user_role ENUM('admin', 'manager') NOT NULL DEFAULT 'manager',
     branch_id INTEGER,
     is_active BOOLEAN NOT NULL
     -- OPTIONAL in real project: created_at and updated_at
