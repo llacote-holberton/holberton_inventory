@@ -1,34 +1,78 @@
+"""
+Product MCP Server
+-------------------
+Ce serveur MCP expose des "tools" (outils) que l'agent IA peut appeler.
+Il ne stocke aucune donnée lui-même : il fait uniquement le pont vers :
+  - l'API Produit externe fournie par l'école (lecture seule, conteneur
+    Docker du pack de ressources : http://localhost:5001 en accès direct,
+    http://external-products-api:5000 depuis un autre conteneur du même
+    réseau Compose)
+  - l'API interne du Backoffice pour lire le stock (lecture seule aussi)
 
+Choix d'architecture pour le stock :
+On appelle un endpoint REST du Backoffice plutôt que de se connecter
+directement à la base de données depuis ce service. Raisons :
+  1. Le Backoffice reste le seul "propriétaire" de la logique métier sur le
+     stock (une seule source de vérité, un seul endroit où les règles
+     changent) — l'API Produit externe ne connaît QUE le catalogue, jamais
+     les quantités en stock (c'est explicite dans son contrat).
+  2. On évite de dupliquer les modèles SQLAlchemy dans deux services
+     différents (product_mcp_server et backoffice).
+  3. Ce service n'a jamais d'accès direct à la base de données.
+
+Gestion des erreurs :
+On distingue deux types d'erreurs, avec des messages différents, pour que
+l'agent IA sache CE QU'IL DOIT dire à l'utilisateur :
+  - ProductNotFoundError : le produit n'existe pas (statut 404).
+  - ProductAPIError : l'API est injoignable, en panne simulée
+    (force_error=true côté API Produit) ou renvoie une erreur serveur.
+FastMCP transforme automatiquement une exception levée dans un tool en un
+résultat marqué isError=True, avec le message de l'exception comme
+contenu : le serveur ne "silent-fail" donc jamais.
+"""
 
 import os
 import httpx
 from pydantic import BaseModel
 from mcp.server.fastmcp import FastMCP
 
-PRODUCT_API_URL = os.getenv("PRODUCT_API_URL", "http://product_api:8080")
-BACKOFFICE_API_URL = os.getenv("BACKOFFICE_API_URL", "http://backoffice:8000")
+# Par défaut : accès direct au conteneur de l'API Produit lancé par le
+# docker-compose du pack de ressources fourni par l'école (port 5001).
+# Si product_mcp_server tourne lui-même dans le même réseau Compose,
+# passer PRODUCT_API_URL=http://external-products-api:5000 à la place.
+PRODUCT_API_URL = os.getenv("PRODUCT_API_URL", "http://localhost:5001")
+BACKOFFICE_API_URL = os.getenv("BACKOFFICE_API_URL", "http://localhost:8000")
 
-mcp = FastMCP("product-mcp-server")
+mcp = FastMCP("product-mcp-server", host="127.0.0.1", port=8001)
 
 
 # --------------------------------------------------------------------------
 # Structures de sortie (on ne renvoie que ce dont l'agent a besoin, pas tout
-# ce que l'API Produit peut exposer par ailleurs)
+# ce que l'API Produit peut exposer par ailleurs — cf. discussion sur
+# Pydantic : un modèle par forme de donnée, pas un modèle par endpoint)
 # --------------------------------------------------------------------------
 
 class ProductSummary(BaseModel):
-    """Résumé d'un produit, utilisé pour la liste des produits."""
-    id: str
+    """Résumé d'un produit, utilisé pour la liste/recherche de produits."""
+    id: int
+    sku: str
     name: str
-    price: float | None = None
+    category: str
+    unit_price: float
 
 
 class ProductDetails(BaseModel):
     """Détails complets d'un produit, utilisés pour une consultation ciblée."""
-    id: str
+    id: int
+    sku: str
     name: str
     description: str | None = None
-    price: float | None = None
+    category: str
+    brand: str | None = None
+    unit_price: float
+    currency: str
+    discontinued: bool = False
+    tags: list[str] = []
 
 
 # --------------------------------------------------------------------------
@@ -43,31 +87,38 @@ class ProductAPIError(Exception):
     """L'API Produit est injoignable ou renvoie une erreur inattendue."""
 
 
-async def _request_product_api(path: str) -> httpx.Response:
+async def _request_product_api(path: str, params: dict | None = None) -> httpx.Response:
     """
-    Centralise les appels HTTP vers l'API Produit et traduit les échecs
-    en erreurs claires et distinctes :
-      - erreur réseau / timeout  -> ProductAPIError
-      - statut 404               -> ProductNotFoundError
-      - autre statut >= 400      -> ProductAPIError
+    Centralise les appels HTTP vers l'API Produit et traduit les échecs en
+    erreurs claires :
+      - erreur réseau / timeout            -> ProductAPIError
+      - statut 404                         -> ProductNotFoundError
+      - autre statut >= 400                -> ProductAPIError
+    Le message d'erreur renvoyé par l'API elle-même (champ "message" du
+    format {"error": ..., "message": ...}) est repris tel quel quand il
+    est disponible, pour rester au plus près de ce que l'API a réellement
+    signalé (ex. produit non trouvé vs erreur simulée avec force_error).
     """
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(f"{PRODUCT_API_URL}{path}")
+            resp = await client.get(f"{PRODUCT_API_URL}{path}", params=params)
     except httpx.RequestError as exc:
         raise ProductAPIError(
             f"Impossible de contacter l'API Produit ({PRODUCT_API_URL}) : {exc}"
         ) from exc
 
-    if resp.status_code == 404:
-        raise ProductNotFoundError(
-            f"Aucun produit trouvé pour la requête '{path}'."
-        )
     if resp.status_code >= 400:
+        try:
+            detail = resp.json().get("message", resp.text)
+        except ValueError:
+            detail = resp.text
+
+        if resp.status_code == 404:
+            raise ProductNotFoundError(detail)
         raise ProductAPIError(
-            f"L'API Produit a répondu avec une erreur "
-            f"{resp.status_code} pour '{path}'."
+            f"L'API Produit a répondu avec une erreur {resp.status_code} : {detail}"
         )
+
     return resp
 
 
@@ -76,34 +127,58 @@ async def _request_product_api(path: str) -> httpx.Response:
 # --------------------------------------------------------------------------
 
 @mcp.tool()
-async def list_products() -> list[dict]:
+async def list_products(
+    q: str | None = None,
+    category: str | None = None,
+    min_price: float | None = None,
+    max_price: float | None = None,
+    limit: int = 20,
+) -> list[dict]:
     """
-    Liste tous les produits disponibles, avec un résumé (id, nom, prix).
-    Lève une erreur explicite si l'API Produit est injoignable.
+    Liste ou recherche des produits, avec un résumé (id, sku, nom,
+    catégorie, prix). q filtre par texte (nom/SKU/description/tags),
+    category filtre par catégorie exacte, min_price/max_price filtrent
+    par fourchette de prix.
     """
-    resp = await _request_product_api("/products")
-    raw_products = resp.json()
+    params = {"limit": limit}
+    if q:
+        params["q"] = q
+    if category:
+        params["category"] = category
+    if min_price is not None:
+        params["min_price"] = min_price
+    if max_price is not None:
+        params["max_price"] = max_price
+
+    resp = await _request_product_api("/api/v1/products", params=params)
+    data = resp.json()
+    raw_products = data.get("items", data) if isinstance(data, dict) else data
     summaries = [
-        ProductSummary(id=p["id"], name=p["name"], price=p.get("price"))
+        ProductSummary(
+            id=p["id"], sku=p["sku"], name=p["name"],
+            category=p["category"], unit_price=p["unit_price"],
+        )
         for p in raw_products
     ]
     return [s.model_dump() for s in summaries]
 
 
 @mcp.tool()
-async def get_product_details(product_id: str) -> dict:
+async def get_product_details(id_or_sku: str) -> dict:
     """
-    Retourne les détails complets (nom, description, prix) d'un produit.
+    Retourne les détails complets (nom, description, prix, catégorie,
+    marque, tags) d'un produit identifié par son id numérique ou son SKU.
     Lève une erreur explicite si le produit n'existe pas, ou si l'API
     Produit est injoignable.
     """
-    resp = await _request_product_api(f"/products/{product_id}")
+    resp = await _request_product_api(f"/api/v1/products/{id_or_sku}")
     data = resp.json()
     details = ProductDetails(
-        id=data["id"],
-        name=data["name"],
-        description=data.get("description"),
-        price=data.get("price"),
+        id=data["id"], sku=data["sku"], name=data["name"],
+        description=data.get("description"), category=data["category"],
+        brand=data.get("brand"), unit_price=data["unit_price"],
+        currency=data["currency"], discontinued=data.get("discontinued", False),
+        tags=data.get("tags", []),
     )
     return details.model_dump()
 
@@ -111,10 +186,11 @@ async def get_product_details(product_id: str) -> dict:
 @mcp.tool()
 async def get_stock(product_id: str | None = None, branch_id: int | None = None) -> list[dict]:
     """
-    Retourne les quantités en stock, filtrables par produit et/ou par branche.
-    Passer product_id pour "quel(s) magasin(s) ont ce produit ?".
-    Passer branch_id pour "que contient telle branche ?".
-    Ne rien passer pour tout récupérer.
+    Retourne les quantités en stock, filtrables par produit et/ou par
+    branche. Passer product_id pour "quel(s) magasin(s) ont ce produit ?".
+    Passer branch_id pour "que contient telle branche ?". Ne rien passer
+    pour tout récupérer. Ces données viennent UNIQUEMENT du Backoffice :
+    l'API Produit externe ne connaît pas les quantités en stock.
     """
     params = {}
     if product_id:
