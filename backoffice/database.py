@@ -27,9 +27,8 @@ engine = create_engine(DB_URL)
 # Autoflush False means "each SQL transaction making a change MUST be
 #   commited explicitely through a db.flush() call".
 #   Useful if/when app wants to control precisely when/how changes are saved.
-# Autocommit is the old name for that parameter, possibly obsolete.
+# Autocommit False was the old way in versions 1.x, now it is default behaviour
 SessionLocal = sessionmaker(bind=engine, autoflush=False)
-Base = declarative_base()
 
 def get_db():
     db = SessionLocal()
