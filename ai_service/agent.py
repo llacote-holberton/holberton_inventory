@@ -26,7 +26,7 @@ import uuid
 from google.adk.agents import LlmAgent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
-from google.adk.tools.mcp_tool import MCPToolset, StreamableHTTPConnectionParams
+from google.adk.tools.mcp_tool import McpToolset, StreamableHTTPConnectionParams
 from google.genai import types
 
 MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://product_mcp_server:8001/mcp")
@@ -51,7 +51,7 @@ SYSTEM_PROMPT = (
 
 # Le toolset se connecte au serveur MCP en streamable-http (le même
 # transport que celui utilisé côté serveur dans product_mcp_server/server.py).
-_mcp_toolset = MCPToolset(
+_mcp_toolset = McpToolset(
     connection_params=StreamableHTTPConnectionParams(url=MCP_SERVER_URL),
 )
 
