@@ -7,8 +7,11 @@ from mcp.server.fastmcp import FastMCP
 # docker-compose du pack de ressources fourni par l'école (port 5001).
 # Si product_mcp_server tourne lui-même dans le même réseau Compose,
 # passer PRODUCT_API_URL=http://external-products-api:5000 à la place.
+# FIXME définir pour de bon les variables d'environnemnet dans le .env "local"
 PRODUCT_API_URL = os.getenv("PRODUCT_API_URL", "http://localhost:5001")
 BACKOFFICE_API_URL = os.getenv("BACKOFFICE_API_URL", "http://localhost:8000")
+#FIXME lire cette variable depuis le .env du backoffice
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY")
 
 mcp = FastMCP("product-mcp-server", host="127.0.0.1",)
 
@@ -167,7 +170,7 @@ async def get_stock(product_id: str | None = None, branch_id: int | None = None)
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(f"{BACKOFFICE_API_URL}/api/stock", params=params)
+            resp = await client.get(f"{BACKOFFICE_API_URL}/api/stock", params=params, headers={"x-api-key": INTERNAL_API_KEY})
     except httpx.RequestError as exc:
         raise ProductAPIError(
             f"Impossible de contacter le Backoffice ({BACKOFFICE_API_URL}) : {exc}"

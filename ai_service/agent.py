@@ -1,25 +1,3 @@
-"""
-Agent IA (Google ADK + Gemini natif)
--------------------------------------
-Version réécrite avec le Google Agent Development Kit (ADK) à la place
-d'une boucle "tool_use" écrite à la main avec le SDK Anthropic brut.
-
-Ce que ADK apporte concrètement :
-  - MCPToolset : se connecte à notre serveur MCP (product_mcp_server) et
-    transforme automatiquement chaque tool exposé en tool ADK. On n'a
-    plus besoin d'écrire la boucle "le modèle demande un tool -> on
-    l'appelle -> on renvoie le résultat -> on recommence" : le Runner
-    d'ADK le fait.
-  - Gemini est le modèle natif d'ADK (pas besoin de LiteLlm ici,
-    contrairement à la version Claude précédente) : on passe directement
-    le nom du modèle en chaîne de caractères à LlmAgent.
-
-Le bug de double sérialisation JSON des résultats de tools MCP (issue
-#3676 sur adk-python) concernait spécifiquement LiteLLM avec des modèles
-non-Gemini (Claude, GPT) — il ne s'applique donc pas à cette version qui
-utilise Gemini nativement.
-"""
-
 import os
 import uuid
 
