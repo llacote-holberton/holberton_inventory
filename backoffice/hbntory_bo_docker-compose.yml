@@ -31,6 +31,23 @@ services:
     ports:
       - "5000:5000"
 
+  bo-internal-api:
+    build:
+      context: ${PWD}
+      dockerfile: Dockerfile.bo_api
+    environment:
+      - DB_HBNTORY_BASENAME=${DB_HBNTORY_BASENAME}
+      - DB_HBNTORY_USER_PWD=${DB_HBNTORY_USER_PWD}
+      - DB_HBNTORY_USER_ID=${DB_HBNTORY_USER_ID}
+      - DB_HOST=stock-db-service
+      - DB_PORT=3306
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+    ports:
+      - "8002:8002"
+    depends_on:
+      - stock-db-service
+
+
 volumes:
   stock_db_data:
     # driver: local
