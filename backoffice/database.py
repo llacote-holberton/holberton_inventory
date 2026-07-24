@@ -28,7 +28,7 @@ engine = create_engine(DB_URL)
 #   commited explicitely through a db.flush() call".
 #   Useful if/when app wants to control precisely when/how changes are saved.
 # Autocommit is the old name for that parameter, possibly obsolete.
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+SessionLocal = sessionmaker(bind=engine, autoflush=False)
 Base = declarative_base()
 
 def get_db():
@@ -41,6 +41,8 @@ def get_db():
 
 if __name__ == "__main__":
     print(dir(get_db))
+    test = get_db()
+    
 
     # Example of why deactivating auto-commit is useful
     # 1. lecture, objet chargé dans l'identity map
