@@ -2,7 +2,7 @@
 # Lancement : docker compose -f hbntory_bo_docker-compose.yml up -d
 # Arrêt     : docker compose -f hbntory_bo_docker-compose.yml down -v
 
-name: hbntory
+name: ${COMPOSE_PROJECT_NAME}
 
 services:
   # Holds the data pertaining quantities of products per store.
@@ -10,8 +10,11 @@ services:
     image: mariadb:latest
     container_name: hbntory-stock-db-service # Mandatory to avoid -n suffix for scaling
     environment:
-      - MARIADB_DATABASE=holberton_inventory
-      - MARIADB_ROOT_PASSWORD=${DB_PASSWORD}
+      - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      # MariaDB_USER is automatically understood as "database admin" so all permissions granted.
+      - MARIADB_DATABASE=${DB_HBNTORY_BASENAME}
+      - MARIADB_USER=${DB_HBNTORY_USER_ID}
+      - MARIADB_PASSWORD=${DB_HBNTORY_USER_PWD}
     ports:
       - "${DB_PORT}:3306"
     volumes:

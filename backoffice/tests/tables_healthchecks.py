@@ -14,11 +14,11 @@ from os import getenv
 from dotenv import load_dotenv
 
 load_dotenv()
-db_user = getenv("DB_USER", "root")
-db_pass = getenv("DB_PASSWORD")
+db_user = getenv("DB_HBNTORY_USER_ID")
+db_pass = getenv("DB_HBNTORY_USER_PWD")
 db_host = getenv("DB_HOST", "localhost")
 db_port = getenv("DB_PORT", "3306")
-db_name = getenv("DB_NAME", "holberton_inventory")
+db_name = getenv("DB_HBNTORY_BASENAME", "holberton_inventory")
 
 
 # Now imports are simplified as the ones related to models are delegated.
