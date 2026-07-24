@@ -1,79 +1,140 @@
+:root {
+  --ink: #1c1f26;
+  --paper: #eff1ee;
+  --paper-raised: #ffffff;
+  --amber: #2bd982;
+  --teal: #2b6e6e;
+  --green: #3f7d5c;
+  --brick: #b3492f;
+  --line: #d7d9d3;
+  --font-display: "Bahnschrift", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
 * { box-sizing: border-box; }
 
 body {
-  font-family: system-ui, sans-serif;
-  color:red;
-  background: #f4f5f7;
   margin: 0;
-  padding: 2rem 1rem;
-}
-
-.chat-container {
-  max-width: 640px;
-  margin: 0 auto;
-  background: #3cfa7b;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-}
-
-h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
-.subtitle { color: #666; font-size: 0.9rem; margin-top: 0; }
-
-.messages {
-  min-height: 300px;
-  max-height: 420px;
-  overflow-y: auto;
-  border: 1px solid #e2e2e2;
-  border-radius: 6px;
-  padding: 0.75rem;
-  margin: 1rem 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
 }
 
-.message {
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  max-width: 80%;
-  white-space: pre-wrap;
-}
-
-.message.user {
-  align-self: flex-end;
-  background: #2563eb;
-  color: #fff;
-}
-
-.message.bot {
-  align-self: flex-start;
-  background: #ececec;
-  color: #111;
-}
-
-.message.error { background: #fee2e2; color: #991b1b; }
-.message.loading { opacity: 0.6; }
-
-#chat-form {
+.topbar {
+  background: var(--ink);
+  color: var(--paper);
   display: flex;
-  gap: 0.5rem;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
 }
 
-#question {
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  font-size: 1.1rem;
+  border-bottom: 3px solid var(--amber);
+  padding-bottom: 2px;
+}
+
+.topnav a {
+  color: var(--paper);
+  text-decoration: none;
+  margin-left: 1.5rem;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  transition: background 0.15s ease;
+}
+.topnav a:hover, .topnav a:focus-visible { background: rgba(255, 255, 255, 0.12); }
+.topnav a.nav-accent { border: 1px solid var(--amber); color: var(--amber); }
+.topnav a.nav-accent:hover { background: var(--amber); color: var(--ink); }
+
+.page {
   flex: 1;
-  padding: 0.6rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 3rem;
+  width: 100%;
 }
 
-button {
-  padding: 0.6rem 1rem;
+h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.ticket {
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.ticket-label {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  color: var(--teal);
+  margin: 0 0 0.6rem;
+}
+
+.tips ul { margin: 0; padding-left: 1.1rem; }
+.tips li { margin-bottom: 0.4rem; line-height: 1.4; }
+
+.ask-form { margin-bottom: 1.5rem; }
+.ask-form textarea {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  padding: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  resize: vertical;
+  background: var(--paper-raised);
+}
+.ask-form textarea:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
+
+.ask-form button {
+  display: block;
+  margin: 0.9rem 0 0 auto;
+  background: var(--amber);
+  color: var(--ink);
   border: none;
-  border-radius: 6px;
-  background: #2563eb;
-  color: #fff;
+  font-weight: 700;
+  padding: 0.7rem 1.6rem;
+  border-radius: 4px;
   cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
 }
+.ask-form button:hover { background: #378f54; }
+.ask-form button:active { transform: translateY(1px); }
+.ask-form button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 
-button:hover { background: #1d4ed8; }
+.response { border-top: 2px dashed var(--line); }
+.response-box {
+  min-height: 100px;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+.response-box .placeholder { color: #8b8d86; font-style: italic; }
+.response-box.error { color: var(--brick); }
+
+.footbar {
+  background: var(--ink);
+  color: #c7c9c3;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.9rem 1.5rem;
+  font-size: 0.8rem;
+  margin-top: auto;
+}
+.footbar a { color: #c7c9c3; }
