@@ -32,6 +32,15 @@ const MOCK_CATALOG = {
 const stockListEl = document.getElementById("stock-list");
 let stockData = [];
 
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function renderStock() {
   stockListEl.innerHTML = "";
 
