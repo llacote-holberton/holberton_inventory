@@ -13,7 +13,7 @@ from models import Stock
 #   c) To allow reuse of the crud function in different contexts which have
 #      their own "session lifecycle"
 # Basically it's "dependency injection" fully applied.
-def get_stock(db: Session, product_id: int, branch_id: int) -> Stock | None:
+def get_stock(db: Session, *, product_id: int, branch_id: int) -> Stock | None:
     return (
         db.query(Stock)
         .filter(Stock.product_id == product_id, Stock.branch_id == branch_id)
@@ -24,7 +24,10 @@ def get_stock(db: Session, product_id: int, branch_id: int) -> Stock | None:
         #   "tell the truth about table state given input".
     )
 
-def add_stock(db: Session, product_id: int, branch_id: int, amount: int) -> int:
+# Note: the *, in signature forces every following parameter to be provided
+#   "as a named argument" instead of "positional argument".
+# Required considering how easy it is to swap two integer ids...
+def add_stock(db: Session, *, product_id: int, branch_id: int, amount: int) -> int:
     """Adds/update 'stock row' and returns the updated quantity"""
     # Step 1: adding stock.
     # Using special function to create a Statement object to use neat function.
@@ -34,11 +37,18 @@ def add_stock(db: Session, product_id: int, branch_id: int, amount: int) -> int:
     )
     # Function being one that either "INSERTS" or "UPDATES" if row exists.
     stmt = stmt.on_duplicate_key_update(quantity=Stock.quantity + amount)
-    db.execute(stmt)
-    db.commit()
+    try:
+        db.execute(stmt)
+        db.commit()
+    except IntegrityError:
+        # Completely cancels the whole transaction.
+        db.rollback()
+        # Propagates the exception so caller can decide what to do with it.
+        raise
     # Step 2: returning updated amount by reading it from the table (as we
     #   never read it before updating + another write could have happened)
-    return (get_stock(db, product_id, branch_id)).quantity
+    return (get_stock(db, product_id=product_id, branch_id=branch_id)).quantity
+
 
 if __name__ == "__main__":
     # On the fly import just for quick and dirty "self-test"
@@ -59,11 +69,16 @@ if __name__ == "__main__":
         # === ADD OPERATIONS ===
         # Add 55 amount to a row of branch_id 4, product_id 6, previously had 0
         print("Amount of Mechanical Keyboard (6) in Caussade before update: ", 
-              (get_stock(db, 6, 4)).quantity)
-        updated = add_stock(db, 6, 4, 55)
-        print("Amount after adding 55: ", 
-              (get_stock(db, 6, 4)).quantity)
+              (get_stock(db, product_id=6, branch_id=4)).quantity)
+        updated = add_stock(db, product_id=6, branch_id=4, amount=55)
+        print(f"Amount after adding 55 should be {updated}: ", 
+              (get_stock(db, product_id=6, branch_id=4)).quantity)
         # Adds new row: 1000 amount of product_id 40 (HB-LGT-1801) to branch 5.
-
+        # Perfect illustration of how to crash app by inverting ids XD
+        # newrow = (add_stock(db, 5, 40, 1000)).quantity
+        nr = add_stock(db, product_id=40, branch_id=5, amount=1000)
+        print("New row added as confirmed by amount: ", nr)
+    #except Exception as e:
+    #    print(e)
     finally:
         db.close()
