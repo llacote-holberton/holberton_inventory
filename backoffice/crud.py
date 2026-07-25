@@ -50,6 +50,32 @@ def add_stock(db: Session, *, product_id: int, branch_id: int, amount: int) -> i
     return (get_stock(db, product_id=product_id, branch_id=branch_id)).quantity
 
 
+# WARNING: ONLY USE FOR INTERNAL TESTS, do NOT EXPOSE.
+def set_stock(db: Session, *, product_id: int, branch_id: int, quantity: int) -> int:
+    """(re)Sets the quantity for a given stock — usage : setup/reset entre tests"""
+    stock = get_stock(db, product_id=product_id, branch_id=branch_id)
+    if stock:
+        stock.quantity = quantity
+    else:
+        stock = Stock(branch_id=branch_id, product_id=product_id, quantity=quantity)
+        db.add(stock)
+    db.commit()
+    db.refresh(stock)  # Forces a db re-read to make object attributes up to date
+    return stock.quantity
+
+
+# WARNING: ONLY USE FOR INTERNAL TESTS.
+def delete_stock(db: Session, *, product_id: int, branch_id: int) -> bool:
+    """Entirely deletes a row from Stocks table"""
+    from sqlalchemy import delete
+    stmt = delete(Stock).where(
+    Stock.product_id == product_id,
+    Stock.branch_id == branch_id
+    )
+    db.execute(stmt)
+    db.commit()
+
+
 if __name__ == "__main__":
     # On the fly import just for quick and dirty "self-test"
     # Note: we don't use the get_db() because get_db just returns
@@ -59,6 +85,7 @@ if __name__ == "__main__":
     from database import SessionLocal
     db = SessionLocal()
     try:
+
         # === READ OPERATIONS ===
         # Should get "no line found"
         result = get_stock(db, product_id=32, branch_id=1)
@@ -66,6 +93,7 @@ if __name__ == "__main__":
         # Should return 15
         result = get_stock(db, product_id=4, branch_id=1)
         print(result.quantity if result else "No such product in that branch")
+
         # === ADD OPERATIONS ===
         # Add 55 amount to a row of branch_id 4, product_id 6, previously had 0
         print("Amount of Mechanical Keyboard (6) in Caussade before update: ", 
@@ -78,6 +106,16 @@ if __name__ == "__main__":
         # newrow = (add_stock(db, 5, 40, 1000)).quantity
         nr = add_stock(db, product_id=40, branch_id=5, amount=1000)
         print("New row added as confirmed by amount: ", nr)
+
+        # === RESET ===
+        set_stock(db, product_id=4, branch_id=1, quantity=15)
+        set_stock(db, product_id=6, branch_id=4, quantity=0)
+        delete_stock(db, product_id=40, branch_id=5)
+
+        # Test adds new line
+        set_stock(db, product_id=35, branch_id=5, quantity=500)
+
+
     #except Exception as e:
     #    print(e)
     finally:
