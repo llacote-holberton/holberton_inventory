@@ -5,6 +5,8 @@ from sqlalchemy import update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from models import Stock
 
+# ========================= STOCK RELATED CRUD =========================
+
 # Warning: session is not created inside but "must" provided "externally", why?
 #   a) To allow efficient "mockup testing" (one can test the function while
 #      targeting an entirely different database, typically a SQLite "test base".
@@ -24,6 +26,7 @@ def get_stock(db: Session, *, product_id: int, branch_id: int) -> Stock | None:
         # NOTE: returns None because only role of that function is
         #   "tell the truth about table state given input".
     )
+
 
 # Note: the *, in signature forces every following parameter to be provided
 #   "as a named argument" instead of "positional argument".
@@ -119,6 +122,7 @@ def delete_stock(db: Session, *, product_id: int, branch_id: int) -> bool:
     db.commit()
 
 
+# ========================= Quick & dirty self-tests =========================
 if __name__ == "__main__":
     # On the fly import just for quick and dirty "self-test"
     # Note: we don't use the get_db() because get_db just returns
@@ -126,49 +130,51 @@ if __name__ == "__main__":
     #   automatically by FastAPI (next(db)).
     # So simpler to just generate a session "manually" here.
     from database import SessionLocal
-    db = SessionLocal()
-    try:
 
-        # === READ OPERATIONS ===
-        # Should get "no line found"
-        result = get_stock(db, product_id=32, branch_id=1)
-        print(result.quantity if result else "No such product in that branch")
-        # Should return 15
-        result = get_stock(db, product_id=4, branch_id=1)
-        print(result.quantity if result else "No such product in that branch")
+    # ==== STOCK crud tests =====
+    def stock_crud_tests():
+        db = SessionLocal()
+        try:
+            # === READ OPERATIONS ===
+            # Should get "no line found"
+            result = get_stock(db, product_id=32, branch_id=1)
+            print(result.quantity if result else "No such product in branch")
+            # Should return 15
+            result = get_stock(db, product_id=4, branch_id=1)
+            print(result.quantity if result else "No such product in branch")
 
-        # === ADD OPERATIONS ===
-        # Add 55 amount to a row of branch_id 4, product_id 6, previously had 0
-        print("Amount of Mechanical Keyboard (6) in Caussade before update: ", 
-              (get_stock(db, product_id=6, branch_id=4)).quantity)
-        updated = add_stock(db, product_id=6, branch_id=4, amount=55)
-        print(f"Amount after adding 55 should be {updated}: ", 
-              (get_stock(db, product_id=6, branch_id=4)).quantity)
-        # Adds new row: 1000 amount of product_id 40 (HB-LGT-1801) to branch 5.
-        # Perfect illustration of how to crash app by inverting ids XD
-        # newrow = (add_stock(db, 5, 40, 1000)).quantity
-        nr = add_stock(db, product_id=40, branch_id=5, amount=1000)
-        print("New row added as confirmed by amount: ", nr)
+            # === ADD OPERATIONS ===
+            # Add 55 amount to a row of branch 4, product 6, previously had 0
+            print("Amount of Mecha Keyboard (6) in Caussade before update: ",
+                (get_stock(db, product_id=6, branch_id=4)).quantity)
+            updated = add_stock(db, product_id=6, branch_id=4, amount=55)
+            print(f"Amount after adding 55 should be {updated}: ", 
+                (get_stock(db, product_id=6, branch_id=4)).quantity)
+            # Adds new row: 1000 amount of pid 40 (HB-LGT-1801) to branch 5.
+            # Perfect illustration of how to crash app by inverting ids XD
+            # newrow = (add_stock(db, 5, 40, 1000)).quantity
+            nr = add_stock(db, product_id=40, branch_id=5, amount=1000)
+            print("New row added as confirmed by amount: ", nr)
 
-        # === RESET ===
-        set_stock(db, product_id=4, branch_id=1, quantity=15)
-        set_stock(db, product_id=6, branch_id=4, quantity=0)
-        delete_stock(db, product_id=40, branch_id=5)
+            # === RESET ===
+            set_stock(db, product_id=4, branch_id=1, quantity=15)
+            set_stock(db, product_id=6, branch_id=4, quantity=0)
+            delete_stock(db, product_id=40, branch_id=5)
 
-        # Test adds new line
-        set_stock(db, product_id=35, branch_id=5, quantity=500)
+            # Test adds new line
+            set_stock(db, product_id=35, branch_id=5, quantity=500)
 
-        # === REMOVE OPERATIONS ===
-        # Reduce stock just created from 500 to 400
-        remove_stock(db, product_id=35, branch_id=5, amount=100)
-        # Then back to exactly 0 (still valid operation)
-        remove_stock(db, product_id=35, branch_id=5, amount=400)
+            # === REMOVE OPERATIONS ===
+            # Reduce stock just created from 500 to 400
+            remove_stock(db, product_id=35, branch_id=5, amount=100)
+            # Then back to exactly 0 (still valid operation)
+            remove_stock(db, product_id=35, branch_id=5, amount=400)
 
-        # Attempt to reduce by too big of an amount
-        remove_stock(db, product_id=6, branch_id=4, amount=9999)
-        # Attempt to reduce inexisting stock
-        remove_stock(db, product_id=666, branch_id=666, amount=666)
-    except Exception as e:
-        print(e)
-    finally:
-        db.close()
+            # Attempt to reduce by too big of an amount
+            remove_stock(db, product_id=6, branch_id=4, amount=9999)
+            # Attempt to reduce inexisting stock
+            remove_stock(db, product_id=666, branch_id=666, amount=666)
+        except Exception as e:
+            print(e)
+        finally:
+            db.close()
