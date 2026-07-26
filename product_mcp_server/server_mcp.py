@@ -3,18 +3,20 @@ import httpx
 from pydantic import BaseModel
 from mcp.server.fastmcp import FastMCP
 
-# Par défaut : accès direct au conteneur de l'API Produit lancé par le
-# docker-compose du pack de ressources fourni par l'école (port 5001).
-# Si product_mcp_server tourne lui-même dans le même réseau Compose,
-# passer PRODUCT_API_URL=http://external-products-api:5000 à la place.
-# FIXME définir pour de bon les variables d'environnemnet dans le .env "local"
-PRODUCT_API_URL = os.getenv("PRODUCT_API_URL", "http://localhost:5001")
-BACKOFFICE_API_URL = os.getenv("BACKOFFICE_API_URL", "http://localhost:8000")
-#FIXME lire cette variable depuis le .env du backoffice
-INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY")
+# Par défaut : accès direct au conteneur de l'API Produit, tel que mappé
+# par le docker-compose du Backoffice (port hôte 5000, confirmé via
+# `docker ps` : 0.0.0.0:5000->5000/tcp). Si product_mcp_server tourne
+# lui-même dans le même réseau Compose, passer
+# PRODUCT_API_URL=http://external-products-api:5000 à la place (ou le
+# nom de service réel du conteneur, ex. products-api).
+PRODUCT_API_URL = os.getenv("PRODUCT_API_URL", "http://localhost:5000")
+BACKOFFICE_API_URL = os.getenv("BACKOFFICE_API_URL", "http://localhost:8002")
+# Clé attendue par le header X-API-KEY de l'API interne du Backoffice
+# (voir backoffice/internal_api.py : verify_internal_key). Doit être la
+# même valeur que INTERNAL_API_KEY dans le .env du Backoffice.
+BACKOFFICE_API_KEY = os.getenv("BACKOFFICE_API_KEY", "")
 
-mcp = FastMCP("product-mcp-server", host="127.0.0.1",)
-
+mcp = FastMCP("product-mcp-server", host="127.0.0.1", port=8001)
 
 # --------------------------------------------------------------------------
 # Structures de sortie (on ne renvoie que ce dont l'agent a besoin, pas tout
@@ -154,28 +156,36 @@ async def get_product_details(id_or_sku: str) -> dict:
 
 
 @mcp.tool()
-async def get_stock(product_id: str | None = None, branch_id: int | None = None) -> list[dict]:
+async def get_stock(product_id: int, branch_id: int) -> dict:
     """
-    Retourne les quantités en stock, filtrables par produit et/ou par
-    branche. Passer product_id pour "quel(s) magasin(s) ont ce produit ?".
-    Passer branch_id pour "que contient telle branche ?". Ne rien passer
-    pour tout récupérer. Ces données viennent UNIQUEMENT du Backoffice :
-    l'API Produit externe ne connaît pas les quantités en stock.
+    Retourne la quantité en stock d'un produit précis dans une branche
+    précise. Les deux identifiants sont obligatoires (c'est une exigence
+    de l'API interne du Backoffice, qui n'expose pas de listing global).
+    Si l'agent ne connaît que l'un des deux, il doit d'abord le
+    déterminer autrement (ex. lister les branches ou les produits)
+    avant d'appeler ce tool. Ces données viennent UNIQUEMENT du
+    Backoffice : l'API Produit externe ne connaît pas les quantités en
+    stock.
     """
-    params = {}
-    if product_id:
-        params["product_id"] = product_id
-    if branch_id:
-        params["branch_id"] = branch_id
+    params = {"product_id": product_id, "branch_id": branch_id}
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(f"{BACKOFFICE_API_URL}/api/stock", params=params, headers={"x-api-key": INTERNAL_API_KEY})
+            resp = await client.get(
+                f"{BACKOFFICE_API_URL}/internal/stock",
+                params=params,
+                headers={"X-API-KEY": BACKOFFICE_API_KEY},
+            )
     except httpx.RequestError as exc:
         raise ProductAPIError(
             f"Impossible de contacter le Backoffice ({BACKOFFICE_API_URL}) : {exc}"
         ) from exc
 
+    if resp.status_code == 403:
+        raise ProductAPIError(
+            "Authentification refusée par le Backoffice (BACKOFFICE_API_KEY "
+            "incorrecte ou absente)."
+        )
     if resp.status_code >= 400:
         raise ProductAPIError(
             f"Le Backoffice a répondu avec une erreur {resp.status_code}."
