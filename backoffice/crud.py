@@ -156,6 +156,21 @@ def create_user(
     db.refresh(new_user)
     return new_user
 
+
+def get_user_by_name(db: Session, user_name: str):
+    """Returning the one user which user_name matches input
+       Used by login
+    """
+    # FIXME what if None given as user_name ??
+    find_usr_stmt = select(User).where(User.name == user_name)
+    # Not the best method here, returns a tuple of single object
+    # ex (<db_models.User object at 0x77ab7a1d5940>,)
+    # matching_usr = db.execute(find_usr_stmt).first()
+    matching_usr = db.scalars(find_usr_stmt).first()
+    # Scalar unwraps the first element so we directly have the User "inside".
+    return matching_usr
+
+
 # ========================= Quick & dirty self-tests =========================
 if __name__ == "__main__":
     # On the fly import just for quick and dirty "self-test"
@@ -218,6 +233,9 @@ if __name__ == "__main__":
         from auth import hash_password
         users_session = SessionLocal()
         print(list_users(users_session))
+
+        get_user_by_name(users_session, None)
+        get_user_by_name(users_session, "laurent")
 
         # Adding a user in Toulouse branch
         new_user_pwd_hash = hash_password("I am test_user")
