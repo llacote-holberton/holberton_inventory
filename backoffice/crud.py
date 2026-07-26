@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from db_models import Stock
-from db_models import User
+from db_models import User, UserRole
 
 # ========================= STOCK RELATED CRUD =========================
 
@@ -125,12 +125,36 @@ def delete_stock(db: Session, *, product_id: int, branch_id: int) -> bool:
 
 # ========================= USERS RELATED CRUD =========================
 def list_users(db: Session):
+    """Returns as a list of ORM Users all users in database"""
     ls_usrs_stmt = select(User).order_by(User.id, User.role)
     # Scalar is the combination of "execute query" and "unwrap tuples"
     #   returned by db as model objects (here Users)
     users_list = db.scalars(ls_usrs_stmt).all()
     return users_list
 
+
+# NOTE: expects hash for password to be already computed
+def create_user(
+    db: Session, user_name: str, pwd_hash: str,
+    role: UserRole = UserRole.MANAGER, branch_id: int | None = None
+) -> User:
+    new_user = User(
+        name=user_name,
+        password_hash=pwd_hash,
+        role=role,
+        branch_id=branch_id,
+        is_active=True
+    )
+    # Adds an object to the list of "pending changes" in Session.
+    #   Nothing actually done SQL-wise yet.
+    db.add(new_user)
+    # Generates the actual SQL INSERT query, waits for SQL to confirm,
+    # By a COMMIT command in MariaDB. From there change is visible by
+    #   other connexions to Db, if any.
+    db.commit()
+    # Reads the line just created in Db to retrieve the auto-generated id
+    db.refresh(new_user)
+    return new_user
 
 # ========================= Quick & dirty self-tests =========================
 if __name__ == "__main__":
@@ -190,5 +214,15 @@ if __name__ == "__main__":
             db.close()
 
     # === Users Crud tests ===
-    users_session = SessionLocal()
-    print(list_users(users_session))
+    def users_crud_tests():
+        from auth import hash_password
+        users_session = SessionLocal()
+        print(list_users(users_session))
+
+        # Adding a user in Toulouse branch
+        new_user_pwd_hash = hash_password("I am test_user")
+        new_user = create_user(users_session, user_name="test_user", pwd_hash=new_user_pwd_hash, branch_id=1)
+        nu2_hash = hash_password("I am not affected yet")
+        nu2 = create_user(users_session, user_name="SBF", pwd_hash=nu2_hash)
+
+    users_crud_tests()
