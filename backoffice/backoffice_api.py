@@ -85,6 +85,7 @@ def deactivate_user_route(
     return {"user_id": user_id, "is_active": False}
 
 
+from api_models import PasswordReset
 @app.post("/users/{user_id}/reset_password")
 def reset_password_route(
     user_id: int,
@@ -109,3 +110,23 @@ def reset_password_route(
     # -H "Authorization: Bearer <token_admin>" \
     # -H "Content-Type: application/json" \
     # -d '{"new_password": "nouveauMotDePasse123"}'
+
+
+from api_models import BranchAssignment
+@app.post("/users/{user_id}/assign_branch")
+def reassign_branch_route(
+    user_id: int,
+    payload: BranchAssignment,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin)
+):
+    from sqlalchemy.exc import IntegrityError
+    try:
+        success = crud.assign_branch(db, user_id=user_id, branch_id=payload.branch_id)
+    # Branch for that id doesn't exist!
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="invalid_branch_id")
+    if not success:
+        raise HTTPException(status_code=404, detail="user_not_found_or_not_manager")
+    return {"user_id": user_id, "branch_id": payload.branch_id}

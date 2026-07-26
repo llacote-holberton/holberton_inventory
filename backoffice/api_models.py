@@ -19,6 +19,8 @@ class UserOut(BaseModel):
     # Password_hash is left out on purpose for security reasons.
 
 
+# ===== API models used for "POST" requests =====
+
 class PasswordReset(BaseModel):
     """Just a Data Transfert Object to ease up new password retrieval"""
     # new_password: str  # Not secure enough to my taste (would accept "")
@@ -26,3 +28,7 @@ class PasswordReset(BaseModel):
     # Max_length because for now we use bcrypt
     # Field is a class allowing to specify data validation constraints
     #   upon the data type.
+
+
+class BranchAssignment(BaseModel):
+    branch_id: int = Field(gt=0)

@@ -182,6 +182,18 @@ def reset_user_password(db: Session, *, user_id: int, password_hash: str) -> boo
     return result.rowcount > 0
 
 
+def assign_branch(db: Session, *, user_id: int, branch_id: int) -> bool:
+    """Changes the branch a user is associated with IF user is Manager"""
+    result = db.execute(
+        update(User)
+        .where(User.id == user_id, User.role == UserRole.MANAGER)
+        .values(branch_id=branch_id)
+    )
+    db.commit()
+    # False if inexisting user or had not 'manager' role.
+    return result.rowcount > 0
+
+
 def set_user_active_state(db: Session, *, user_id: int, is_active: bool) -> bool:
     result = db.execute(
         update(User).where(User.id == user_id).values(is_active=is_active)
