@@ -252,15 +252,19 @@ if __name__ == "__main__":
     def users_crud_tests():
         from auth import hash_password
         users_session = SessionLocal()
-        print(list_users(users_session))
+        # print(list_users(users_session))
 
-        get_user_by_name(users_session, None)
-        get_user_by_name(users_session, "laurent")
+        # print(get_user_by_name(users_session, None))
+        # print(get_user_by_name(users_session, "laurent"))
 
         # Adding a user in Toulouse branch
-        new_user_pwd_hash = hash_password("I am test_user")
-        new_user = create_user(users_session, user_name="test_user", pwd_hash=new_user_pwd_hash, branch_id=1)
-        nu2_hash = hash_password("I am not affected yet")
-        nu2 = create_user(users_session, user_name="SBF", pwd_hash=nu2_hash)
+        # new_user_pwd_hash = hash_password("I am test_user")
+        # new_user = create_user(users_session, user_name="test_user", pwd_hash=new_user_pwd_hash, branch_id=1)
+        # nu2_hash = hash_password("I am not affected yet")
+        # nu2 = create_user(users_session, user_name="SBF", pwd_hash=nu2_hash)
+        # FIXME IMPROVE create_user to properly manage exceptions including 
+        # "sqlalchemy.exc.IntegrityError: (pymysql.err.IntegrityError) (1062, "Duplicate entry 'test_user' for key 'user_name'")"
+        new_admin_pwd_hash = hash_password("admin password")
+        new_admin = create_user(users_session, user_name="test_admin", pwd_hash=new_admin_pwd_hash, role="admin")
 
     users_crud_tests()
