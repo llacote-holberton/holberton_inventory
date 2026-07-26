@@ -1,7 +1,7 @@
 """Module defining the data structure as exposed to APIs"""
 # Previously called schemas.py
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from db_models import UserRole
 
 class UserOut(BaseModel):
@@ -17,3 +17,12 @@ class UserOut(BaseModel):
     branch_id: int | None
     is_active: bool
     # Password_hash is left out on purpose for security reasons.
+
+
+class PasswordReset(BaseModel):
+    """Just a Data Transfert Object to ease up new password retrieval"""
+    # new_password: str  # Not secure enough to my taste (would accept "")
+    new_password: str = Field(min_length=8, max_length=72)
+    # Max_length because for now we use bcrypt
+    # Field is a class allowing to specify data validation constraints
+    #   upon the data type.

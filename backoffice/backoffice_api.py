@@ -84,3 +84,28 @@ def deactivate_user_route(
         raise HTTPException(status_code=404, detail="user_not_found")
     return {"user_id": user_id, "is_active": False}
 
+
+@app.post("/users/{user_id}/reset_password")
+def reset_password_route(
+    user_id: int,
+    # Uses a Pydantic model from api_models to automatically extract
+    #   the string from JSON body
+    payload: PasswordReset,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin)
+):
+    # Exceptionally imports kept here because only used in this route.
+    from auth import hash_password
+    from api_models import PasswordReset
+
+    new_hash = hash_password(payload.new_password)
+    success = crud.reset_user_password(db, user_id=user_id, password_hash = new_hash)
+    if not success:
+        raise HTTPException(status_code = 404, detail="user_not_found")
+    return {"user_id": user_id, "status": "password_successfully_reset"}
+
+    # How to test quickly (with a valid Admin JWT)
+    #   curl -X POST "http://localhost:8000/users/3/reset_password" \
+    # -H "Authorization: Bearer <token_admin>" \
+    # -H "Content-Type: application/json" \
+    # -d '{"new_password": "nouveauMotDePasse123"}'
