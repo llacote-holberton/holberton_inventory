@@ -3,6 +3,17 @@
    change for Argon2Id later if it's not too hard.
 """
 import bcrypt
+import jwt
+from datetime import datetime, timedelta, timezone
+from os import getenv
+from dotenv import load_dotenv
+
+load_dotenv()
+
+JWT_SECRET = getenv("JWT_SECRET")
+JWT_ALGORITHM = getenv("JWT_ALGORITHM", "HS256")
+JWT_EXPIRE_MINUTES = int(getenv("JWT_EXPIRE_MINUTES", 60))
+
 
 def hash_password(plain_password: str) -> str:
     """Generates a long string by applying a 'random salt' then hashing."""
@@ -20,7 +31,21 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     )
 
 
-# Self-teaching notes
+def create_access_token(*, user_id: int, role: str,
+                        branch_id: int | None) -> str:
+    payload = {
+        # Note: "sub" is the mandatory, arbitrary field to hold the "identifier"
+        "sub": str(user_id),
+        "role": role,
+        "branch_id": branch_id,
+        # Note: exp is special field used to check expiration cf comment.
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRE_MINUTES),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+# ====== SELF-TEACHING NOTES ======
+# == On user password hashing with bcrypt ==
 # The hash would generate something like this after UTF-8 decoding...
 # $2b$12$KIXQx5Z8vN3mR7wYtL9pOeJhX2Wn4Fk6Ds8Tq1Vr0Cy5Ab3Ez.Wm
 # This is the concatenation of several things, each field is separated by '$'.
@@ -28,3 +53,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 # * Cost factor (higher means more effort to crack from brute-force)
 # * salt used (22 chars)
 # * actual password's hash made with that salt
+# == On JWT generation ==
+# the "exp" key in payload is a special field known by the pyjwt library
+#   so that when the token is read the date is automatically decoded and
+#   checked against current time, raising an Exception if expired.
