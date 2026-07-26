@@ -170,6 +170,17 @@ def get_user_by_name(db: Session, user_name: str):
     # Scalar unwraps the first element so we directly have the User "inside".
     return matching_usr
 
+# Note: because we try to keep the principle that CRUD methods just
+#  interact with database with "prepared values", this method requires
+#  an already hashed password "ready to store".
+def reset_user_password(db: Session, *, user_id: int, password_hash: str) -> bool:
+    """Resets a given user's password, identified by its id"""
+    result = db.execute(
+        update(User).where(User.id == user_id).values(password_hash=password_hash)
+    )
+    db.commit()
+    return result.rowcount > 0
+
 
 def set_user_active_state(db: Session, *, user_id: int, is_active: bool) -> bool:
     result = db.execute(
