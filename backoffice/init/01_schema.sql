@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS users
     -- Causing problems in app.
     user_role ENUM('admin', 'manager') NOT NULL DEFAULT 'manager',
     branch_id INTEGER,
-    is_active BOOLEAN NOT NULL
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
     -- OPTIONAL in real project: created_at and updated_at
 );
 
