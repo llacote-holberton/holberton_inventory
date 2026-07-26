@@ -15,7 +15,7 @@ def list_users_route(db: Session = Depends(get_db)):
     # ...mais FastAPI ne sérialise QUE les champs déclarés dans UserOut, le hash est ignoré
 
 
-from auth import verify_password
+from auth import verify_password, create_access_token
 @app.post("/login")
 def login(username: str, password: str, db: Session = Depends(get_db)):
     user = crud.get_user_by_name(db, username)
@@ -29,8 +29,14 @@ def login(username: str, password: str, db: Session = Depends(get_db)):
     # Password checks out we can generate a Json Web Token (JWT)
     #   which can be stored in user's browser to be reused automagically later
     #   when user will make requests to interact with database.
-    #FIXME replace with JWT generation
-    return {"msg": "Yay! Your password has been successfully validated!"}
+    #WARNING: MUST use "user.role.value" because UserRole Enum in spite of
+    #  being able to behave as a string is not correctly serialized by FastAPI.
+    jwt = create_access_token(user_id=user.id, role=user.role.value,
+                              branch_id=user.branch_id)
+    # MUST return exactly this format to respect standard established by
+    # OAuth2 (RFC 6749, section 5.1, "Access Token Response")
+    return {"access_token": jwt, "token_type": "bearer"}
+
 
 # @app.post("/branches/{branch_id}/stock/add")
 # def add_stock_route(
