@@ -29,9 +29,12 @@ SELECT '--- (re)Inserting default users ---' AS log;
 
 INSERT IGNORE INTO users (user_name, user_role, password_hash, branch_id)
 VALUES
-    ('god', 'admin', "pseudo password hash en attendant", NULL),
-    ('yoann', 'manager', "gureto passewordu", 1),
-    ('laurent', 'manager', "my top password", 5)
+    -- 'god': hash matches 'pseudo password hash en attendant'
+    ('god', 'admin', "$2b$12$yMQ4a1dEaVkawKermyxmSuDMVYUhJSh8TpO9C8hzHld9eFlJ5XgUe", NULL),
+    -- Yoann: hash matches password 'gureto passewordu'
+    ('yoann', 'manager', "$2b$12$0o18ukoGPNG5g3UI17n3oeolT0ipyobV6JzwXt7JQuQDO1K8suwGe", 1),
+    -- Laurent: hash matches password 'my top password'
+    ('laurent', 'manager', "$2b$12$rnywHdockwbTPaHQGFSKge7YP00cIxuf5dP0JyWlmnQlpyyj2E3fK", 5)
     -- SHOWS that CHECK on user_role value is enabled, will not be inserted.
     -- HOWEVER with an ENUM it is different the invalid value will be ignored
     --   and replaced with NULL, which is hugely problematic.
