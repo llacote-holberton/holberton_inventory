@@ -9,7 +9,9 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 import crud
-
+# Required to ease up login with passwords having special chars
+# Forces all strings to be passed "as is"
+from api_models import LoginRequest
 
 app = FastAPI(title="Hbntory Backoffice")
 
@@ -18,7 +20,10 @@ app = FastAPI(title="Hbntory Backoffice")
 
 # =============== AUTHENTICATION RELATED ROUTES ===============
 @app.post("/login")
-def login(username: str, password: str, db: Session = Depends(get_db)):
+def login(payload: LoginRequest, db: Session = Depends(get_db)):
+    # Using the "minimal changes" approach
+    username = payload.username
+    password = payload.password
     user = crud.get_user_by_name(db, username)
     # NOTE: it's a "best practice" in security to NOT detail WHY login failed.
     #   as telling "wrong password" (implied: good login) for example would

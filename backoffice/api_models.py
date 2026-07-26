@@ -21,6 +21,11 @@ class UserOut(BaseModel):
 
 # ===== API models used for "POST" requests =====
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
 class PasswordReset(BaseModel):
     """Just a Data Transfert Object to ease up new password retrieval"""
     # new_password: str  # Not secure enough to my taste (would accept "")
