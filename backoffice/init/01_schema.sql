@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS users
     id INTEGER PRIMARY KEY AUTO_INCREMENT,
     user_name VARCHAR(30) NOT NULL UNIQUE,
     password_hash VARCHAR(255),
+    -- WARNING: IF an INSERT without any value for user_role arrived
+    --   Then MariaDb WOULD NOT USE THE DEFAULT but insert "NULL"
+    -- Causing problems in app.
     user_role ENUM('admin', 'manager') NOT NULL DEFAULT 'manager',
     branch_id INTEGER,
     is_active BOOLEAN NOT NULL

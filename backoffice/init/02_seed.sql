@@ -32,8 +32,10 @@ VALUES
     ('god', 'admin', "pseudo password hash en attendant", NULL),
     ('yoann', 'manager', "gureto passewordu", 1),
     ('laurent', 'manager', "my top password", 5),
-    -- SHOWS that check on user_role value is enabled, will not be inserted.
-    ('luc@example.com', 'Luc', 22, 3);
+    -- SHOWS that CHECK on user_role value is enabled, will not be inserted.
+    -- HOWEVER with an ENUM it is different the invalid value will be ignored
+    --   and replaced with NULL, which is hugely problematic.
+    -- ('luc@example.com', 'Luc', 22, 3);
 ;
 
 -- SHOWS that a user can be created without filling everything
