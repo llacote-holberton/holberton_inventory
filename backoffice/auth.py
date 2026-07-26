@@ -7,12 +7,19 @@ import jwt
 from datetime import datetime, timedelta, timezone
 from os import getenv
 from dotenv import load_dotenv
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
+
 
 load_dotenv()
 
 JWT_SECRET = getenv("JWT_SECRET")
 JWT_ALGORITHM = getenv("JWT_ALGORITHM", "HS256")
 JWT_EXPIRE_MINUTES = int(getenv("JWT_EXPIRE_MINUTES", 60))
+# Using a class which knows how to extract JWT from request headers
+# The tokenUrl is given so Swagger interface can auto-document where
+#   to call to generate a token and "make it for user" using "try".
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 
 def hash_password(plain_password: str) -> str:
@@ -42,6 +49,34 @@ def create_access_token(*, user_id: int, role: str,
         "exp": datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRE_MINUTES),
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+# Note: Claude suggested get_current_user as a conventional name
+#   but I found it counter-intuitive considering we never actually
+#   "get" a "User" (aka data from db), we just exploit whatever data
+#   we put in the jwt when creating it. Hence why having the "role" value
+#     in it is mandatory here. And also creates a limit.
+# If a user is deactivated while having a valid JWT, (s)he will be
+#   able to connect until its current jwt expires.
+def get_jwt_payload(token: str = Depends(oauth2_scheme)) -> dict:
+    try:
+        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="token_expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="invalid_token")
+
+
+def require_manager(current_user: dict = Depends(get_jwt_payload)) -> dict:
+    if current_user.get("role") != "manager":
+        raise HTTPException(status_code=403, detail="forbidden")
+    return current_user
+
+
+def require_admin(current_user: dict = Depends(get_jwt_payload)) -> dict:
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="forbidden")
+    return current_user
 
 
 # ====== SELF-TEACHING NOTES ======

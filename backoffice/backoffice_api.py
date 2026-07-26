@@ -5,6 +5,7 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from database import get_db
 import crud
+from auth import get_jwt_payload
 
 app = FastAPI(title="Hbntory Backoffice")
 
@@ -37,6 +38,16 @@ def login(username: str, password: str, db: Session = Depends(get_db)):
     # OAuth2 (RFC 6749, section 5.1, "Access Token Response")
     return {"access_token": jwt, "token_type": "bearer"}
 
+
+@app.get("/whoami")
+def whoami(current_user: dict = Depends(get_jwt_payload)):
+    """Just returns the unpacked payload from JWT"""
+    return current_user
+    # To test: 
+    # curl -X POST 
+    # "http://localhost:8000/login?username=god&password=<le_mdp_en_clair_du_seed>"
+    # curl "http://localhost:8000/whoami" -> must get 401 because no token
+    # curl "http://localhost:8000/whoami" -H "Authorization: Bearer <le_token_recupere>"
 
 # @app.post("/branches/{branch_id}/stock/add")
 # def add_stock_route(
