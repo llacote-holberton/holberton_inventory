@@ -31,7 +31,7 @@ INSERT IGNORE INTO users (user_name, user_role, password_hash, branch_id)
 VALUES
     ('god', 'admin', "pseudo password hash en attendant", NULL),
     ('yoann', 'manager', "gureto passewordu", 1),
-    ('laurent', 'manager', "my top password", 5),
+    ('laurent', 'manager', "my top password", 5)
     -- SHOWS that CHECK on user_role value is enabled, will not be inserted.
     -- HOWEVER with an ENUM it is different the invalid value will be ignored
     --   and replaced with NULL, which is hugely problematic.
