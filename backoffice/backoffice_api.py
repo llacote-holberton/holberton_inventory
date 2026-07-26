@@ -1,25 +1,22 @@
+# Required to exploit local environment variables
 from dotenv import load_dotenv
 load_dotenv()
-
+# Authentication related imports
+from auth import verify_password, create_access_token
+from auth import get_jwt_payload, require_manager, require_admin
+# CRUD operations related import
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from database import get_db
 import crud
-from auth import get_jwt_payload, require_manager, require_admin
+
 
 app = FastAPI(title="Hbntory Backoffice")
 
-from api_models import UserOut
-@app.get("/users", response_model=list[UserOut])
-def list_users_route(db: Session = Depends(get_db),
-                     # Requests the "depends" function to be executed
-                     #   without any trouble. Name is arbitrary, could be _
-                     is_admin: dict = Depends(require_admin)):
-    return crud.list_users(db)  # renvoie toujours de vrais User avec le hash en mémoire...
-    # ...mais FastAPI ne sérialise QUE les champs déclarés dans UserOut, le hash est ignoré
 
 
-from auth import verify_password, create_access_token
+
+# =============== AUTHENTICATION RELATED ROUTES ===============
 @app.post("/login")
 def login(username: str, password: str, db: Session = Depends(get_db)):
     user = crud.get_user_by_name(db, username)
@@ -52,12 +49,17 @@ def whoami(current_user: dict = Depends(get_jwt_payload)):
     # curl "http://localhost:8000/whoami" -> must get 401 because no token
     # curl "http://localhost:8000/whoami" -H "Authorization: Bearer <le_token_recupere>"
 
-# @app.post("/branches/{branch_id}/stock/add")
-# def add_stock_route(
-#     branch_id: int,
-#     product_id: int,
-#     amount: int,
-#     db: Session = Depends(get_db),
-# ):
-#     new_quantity = crud.add_stock(db, product_id=product_id, branch_id=branch_id, amount=amount)
-#     return {"branch_id": branch_id, "product_id": product_id, "quantity": new_quantity}
+
+# =============== USERS RELATED ROUTES ===============
+from api_models import UserOut
+@app.get("/users", response_model=list[UserOut])
+def list_users_route(db: Session = Depends(get_db),
+                     # Requests the "depends" function to be executed
+                     #   without any trouble. Name is arbitrary, could be _
+                     is_admin: dict = Depends(require_admin)):
+    return crud.list_users(db)  # renvoie toujours de vrais User avec le hash en mémoire...
+    # ...mais FastAPI ne sérialise QUE les champs déclarés dans UserOut, le hash est ignoré
+
+
+
+
