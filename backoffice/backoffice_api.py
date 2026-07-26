@@ -5,13 +5,16 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from database import get_db
 import crud
-from auth import get_jwt_payload
+from auth import get_jwt_payload, require_manager, require_admin
 
 app = FastAPI(title="Hbntory Backoffice")
 
 from api_models import UserOut
 @app.get("/users", response_model=list[UserOut])
-def list_users_route(db: Session = Depends(get_db)):
+def list_users_route(db: Session = Depends(get_db),
+                     # Requests the "depends" function to be executed
+                     #   without any trouble. Name is arbitrary, could be _
+                     is_admin: dict = Depends(require_admin)):
     return crud.list_users(db)  # renvoie toujours de vrais User avec le hash en mémoire...
     # ...mais FastAPI ne sérialise QUE les champs déclarés dans UserOut, le hash est ignoré
 
