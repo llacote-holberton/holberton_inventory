@@ -276,7 +276,7 @@ if __name__ == "__main__":
         # nu2 = create_user(users_session, user_name="SBF", pwd_hash=nu2_hash)
         # FIXME IMPROVE create_user to properly manage exceptions including 
         # "sqlalchemy.exc.IntegrityError: (pymysql.err.IntegrityError) (1062, "Duplicate entry 'test_user' for key 'user_name'")"
-        new_admin_pwd_hash = hash_password("admin password")
+        new_admin_pwd_hash = hash_password("admin_password")
         new_admin = create_user(users_session, user_name="test_admin", pwd_hash=new_admin_pwd_hash, role="admin")
 
     users_crud_tests()
