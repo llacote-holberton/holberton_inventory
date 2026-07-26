@@ -26,7 +26,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 # Importing models from my own code.
-from models import Branch, Stock
+from db_models import Branch, Stock
 
 # 2. Connexion à la base de données (remplacer avec vos identifiants MariaDB)
 DB_URL = f"mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"

@@ -3,8 +3,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select, update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
-from models import Stock
-from models import User
+from db_models import Stock
+from db_models import User
 
 # ========================= STOCK RELATED CRUD =========================
 

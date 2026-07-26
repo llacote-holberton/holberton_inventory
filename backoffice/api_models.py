@@ -2,7 +2,7 @@
 # Previously called schemas.py
 
 from pydantic import BaseModel, ConfigDict
-from models import UserRole
+from db_models import UserRole
 
 class UserOut(BaseModel):
     """UserOut as in user outputed for API consumption"""
