@@ -2,6 +2,7 @@ import os
 import uuid
 
 from google.adk.agents import LlmAgent
+from google.adk.models.lite_llm import LiteLlm
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.adk.tools.mcp_tool import McpToolset, StreamableHTTPConnectionParams
@@ -9,13 +10,16 @@ from google.genai import types
 
 MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://product_mcp_server:8001/mcp")
 
-# Avec Gemini, pas besoin de LiteLlm : c'est le modèle natif d'ADK, on
-# passe directement le nom du modèle en chaîne de caractères. Nécessite
-# les variables d'environnement GOOGLE_API_KEY et
-# GOOGLE_GENAI_USE_VERTEXAI=FALSE (pour utiliser l'API Google AI Studio
-# plutôt que Vertex AI).
-MODEL = "gemini-2.5-flash"
-
+# Format attendu par LiteLLM pour Groq : "groq/<nom_du_modele>".
+# llama-3.3-70b-versatile plutôt qu'un modèle "openai/gpt-oss-*" :
+# ces derniers sont des modèles "reasoning", et LiteLLM a un bug connu
+# et non résolu (issues ouvertes sur son propre dépôt GitHub) où le
+# contenu de raisonnement est réinjecté dans l'historique reconstruit
+# pour l'appel suivant, ce que l'API Groq rejette ensuite -- ça casse
+# précisément dans une boucle multi-tours comme la nôtre (question ->
+# appel de tool -> réponse). llama-3.3-70b-versatile n'a pas cette classe
+# de bug puisque ce n'est pas un modèle "reasoning".
+MODEL = "groq/llama-3.3-70b-versatile"
 APP_NAME = "ai_query_service"
 
 SYSTEM_PROMPT = (
@@ -24,17 +28,34 @@ SYSTEM_PROMPT = (
     "outils disponibles. Si les outils ne fournissent pas assez "
     "d'informations pour répondre avec certitude, dis explicitement que "
     "l'information n'est pas disponible. N'invente jamais de données "
-    "(prix, quantités, noms de produits, etc.)."
+    "(prix, quantités, noms de produits, etc.).\n\n"
+    "IMPORTANT : le catalogue de produits (noms, descriptions, tags) est "
+    "entièrement en anglais, même si l'utilisateur pose sa question en "
+    "français. Quand tu utilises le paramètre de recherche texte (q) du "
+    "tool list_products, traduis d'abord les mots-clés pertinents en "
+    "anglais (ex. \"souris sans fil\" -> \"wireless mouse\"), car la "
+    "recherche est un filtre texte brut qui ne traduit rien lui-même. Ne "
+    "traduis en revanche jamais les noms de produits dans ta réponse "
+    "finale à l'utilisateur : garde-les tels que renvoyés par le "
+    "catalogue."
 )
 
 # Le toolset se connecte au serveur MCP en streamable-http (le même
 # transport que celui utilisé côté serveur dans product_mcp_server/server.py).
+# Point important : les tools et leurs schémas sont récupérés dynamiquement
+# auprès du serveur MCP — un changement de signature côté server.py (comme
+# le passage de `product_id` à `id_or_sku` pour get_product_details) n'a
+# donc rien à modifier ici.
 _mcp_toolset = McpToolset(
     connection_params=StreamableHTTPConnectionParams(url=MCP_SERVER_URL),
 )
 
 root_agent = LlmAgent(
-    model=MODEL,
+    # temperature=0 : recommandation officielle de Groq pour l'erreur
+    # "tool_use_failed" — une température plus basse rend le format de
+    # l'appel de fonction plus déterministe, donc moins sujet à un
+    # mélange de texte libre et de syntaxe de tool mal formée.
+    model=LiteLlm(model=MODEL, temperature=0),
     name="product_stock_agent",
     instruction=SYSTEM_PROMPT,
     tools=[_mcp_toolset],
@@ -47,9 +68,9 @@ _runner = Runner(agent=root_agent, app_name=APP_NAME, session_service=_session_s
 async def answer_question(question: str) -> str:
     """
     Traite une question de façon totalement indépendante : on crée une
-    session ADK jetable (un identifiant unique par appel), on l'utilise
-    une fois, puis on ne la réutilise jamais. Cohérent avec l'énoncé qui
-    précise qu'aucun historique de conversation n'est requis.
+    session ADK jetable (un identifiant unique par appel), utilisée une
+    seule fois. Cohérent avec l'énoncé qui précise qu'aucun historique de
+    conversation n'est requis.
     """
     user_id = "anonymous"
     session_id = str(uuid.uuid4())
