@@ -5,7 +5,7 @@ load_dotenv()
 from auth import verify_password, create_access_token
 from auth import get_jwt_payload, require_manager, require_admin
 # CRUD operations related import
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 import crud
@@ -61,5 +61,26 @@ def list_users_route(db: Session = Depends(get_db),
     # ...mais FastAPI ne sérialise QUE les champs déclarés dans UserOut, le hash est ignoré
 
 
+@app.post("/users/{user_id}/activate")
+def activate_user_route(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    success = crud.set_user_active_state(db, user_id=user_id, is_active=True)
+    if not success:
+        raise HTTPException(status_code=404, detail="user_not_found")
+    return {"user_id": user_id, "is_active": True}
 
+
+@app.post("/users/{user_id}/deactivate")
+def deactivate_user_route(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    success = crud.set_user_active_state(db, user_id=user_id, is_active=False)
+    if not success:
+        raise HTTPException(status_code=404, detail="user_not_found")
+    return {"user_id": user_id, "is_active": False}
 

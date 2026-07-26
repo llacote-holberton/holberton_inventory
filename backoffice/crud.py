@@ -171,6 +171,15 @@ def get_user_by_name(db: Session, user_name: str):
     return matching_usr
 
 
+def set_user_active_state(db: Session, *, user_id: int, is_active: bool) -> bool:
+    result = db.execute(
+        update(User).where(User.id == user_id).values(is_active=is_active)
+    )
+    db.commit()
+    # If no row means user_id didn't exist
+    return result.rowcount > 0
+
+
 # ========================= Quick & dirty self-tests =========================
 if __name__ == "__main__":
     # On the fly import just for quick and dirty "self-test"
