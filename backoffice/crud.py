@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 """Module dedicated to actual CRUD operations on database"""
 from sqlalchemy.orm import Session
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from models import Stock
+from models import User
 
 # ========================= STOCK RELATED CRUD =========================
 
@@ -122,6 +123,15 @@ def delete_stock(db: Session, *, product_id: int, branch_id: int) -> bool:
     db.commit()
 
 
+# ========================= USERS RELATED CRUD =========================
+def list_users(db: Session):
+    ls_usrs_stmt = select(User).order_by(User.id, User.role)
+    # Scalar is the combination of "execute query" and "unwrap tuples"
+    #   returned by db as model objects (here Users)
+    users_list = db.scalars(ls_usrs_stmt).all()
+    return users_list
+
+
 # ========================= Quick & dirty self-tests =========================
 if __name__ == "__main__":
     # On the fly import just for quick and dirty "self-test"
@@ -178,3 +188,7 @@ if __name__ == "__main__":
             print(e)
         finally:
             db.close()
+
+    # === Users Crud tests ===
+    users_session = SessionLocal()
+    print(list_users(users_session))
