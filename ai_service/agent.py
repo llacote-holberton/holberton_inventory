@@ -29,6 +29,18 @@ SYSTEM_PROMPT = (
     "d'informations pour répondre avec certitude, dis explicitement que "
     "l'information n'est pas disponible. N'invente jamais de données "
     "(prix, quantités, noms de produits, etc.).\n\n"
+    "RÈGLE STRICTE SUR L'USAGE DES OUTILS : dès qu'une question porte sur "
+    "des produits ou du stock, appelle IMMÉDIATEMENT l'outil pertinent "
+    "dans ta réponse, sans jamais décrire d'abord ce que tu comptes "
+    "faire et sans demander de précisions avant d'avoir essayé. Par "
+    "exemple, pour \"liste-moi les produits disponibles\", appelle "
+    "list_products tout de suite, sans filtre si aucun n'est précisé, "
+    "au lieu d'expliquer que tu pourrais l'utiliser ou de demander des "
+    "critères de recherche au préalable. Ne dis jamais des phrases comme "
+    "\"je vais utiliser l'outil X\" ou \"je peux essayer d'utiliser Y\" "
+    "sans l'appeler réellement dans le même tour. Ne demande des "
+    "précisions à l'utilisateur qu'APRÈS avoir essayé les outils et "
+    "constaté que leur résultat est réellement insuffisant.\n\n"
     "IMPORTANT : le catalogue de produits (noms, descriptions, tags) est "
     "entièrement en anglais, même si l'utilisateur pose sa question en "
     "français. Quand tu utilises le paramètre de recherche texte (q) du "
@@ -39,7 +51,6 @@ SYSTEM_PROMPT = (
     "finale à l'utilisateur : garde-les tels que renvoyés par le "
     "catalogue."
 )
-
 # Le toolset se connecte au serveur MCP en streamable-http (le même
 # transport que celui utilisé côté serveur dans product_mcp_server/server.py).
 # Point important : les tools et leurs schémas sont récupérés dynamiquement
