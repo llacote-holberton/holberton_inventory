@@ -22,6 +22,14 @@ class ProductStockSummary(BaseModel):
     details: list[StockOut]
 
 
+class BranchOut(BaseModel):
+    """Representation of stock to serialize in Response's bodies as JSON"""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    label: str
+
+
 class UserOut(BaseModel):
     """UserOut as in user outputed for API consumption"""
 

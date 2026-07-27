@@ -5,6 +5,7 @@ from sqlalchemy import select, update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from db_models import Stock
 from db_models import User, UserRole
+from db_models import Branch
 
 # ========================= STOCK RELATED CRUD =========================
 
@@ -108,6 +109,11 @@ def list_stocks_for_product(db: Session, *, product_id: int) -> list[Stock]:
 def list_stocks_for_branch(db: Session, * , branch_id: int) -> list[Stock]:
     all_stocks_for_branch_stmt = select(Stock).where(Stock.branch_id == branch_id)
     return db.scalars(all_stocks_for_branch_stmt).all()
+
+
+def list_branches(db: Session) -> list[Branch]:
+    all_branches_infos_stmt = select(Branch)
+    return db.scalars(all_branches_infos_stmt).all()
 
 
 # ==== TESTMETHODS (FIXME check if can be removed once automated tests ====

@@ -12,7 +12,7 @@ from database import get_db
 # Gets the functions defining CRUD operations
 import crud
 # Pydantic models
-from api_models import StockOut, ProductStockSummary
+from api_models import StockOut, ProductStockSummary, BranchOut
 
 load_dotenv()
 app = FastAPI(title="HbNTory Backoffice Internal API")
@@ -73,6 +73,14 @@ def product_get_all_stocks(product_id: int, db: Session = Depends(get_db)):
 )
 def branch_get_all_stocks(branch_id: int, db: Session = Depends(get_db)):
     return crud.list_stocks_for_branch(db, branch_id=branch_id)
+
+
+@app.get("/internal/branches/list",
+         response_model=list[BranchOut],
+         dependencies=[Depends(verify_internal_key)]
+)
+def list_branches_route(db: Session = Depends(get_db)):
+    return crud.list_branches(db)
 
 
 if __name__ == "__main__":

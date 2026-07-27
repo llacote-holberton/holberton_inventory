@@ -25,7 +25,7 @@ from sqlalchemy.orm import sessionmaker
 
 from db_models import Base, Branch, Stock
 from database import get_db
-from api_models import StockOut
+from api_models import StockOut, BranchOut
 
 from internal_api import app, INTERNAL_API_KEY, verify_internal_key
 
@@ -160,3 +160,24 @@ def test_stock_by_branch_with_no_stock_returns_empty_list(two_branches):
     assert response.status_code == 200
     assert response.json() == []
 
+# ---- GET /internal/branches/list ----
+
+def test_list_branches_returns_all(two_branches):
+    response = client.get("/internal/branches/list", headers=VALID_HEADERS)
+    assert response.status_code == 200
+    results = response.json()
+    assert len(results) == 2
+    labels = {b["label"] for b in results}
+    assert labels == {"Toulouse Esquirol", "Caussade"}
+
+
+def test_list_branches_without_api_key_returns_error():
+    # Header totalement absent -> rejeté par la validation FastAPI elle-même, avant ta fonction
+    response = client.get("/internal/branches/list")
+    assert response.status_code == 422
+
+
+def test_list_branches_with_wrong_api_key_returns_error():
+    # Header présent mais incorrect -> ta fonction s'exécute et lève 403 volontairement
+    response = client.get("/internal/branches/list", headers={"x-api-key": "wrong-key"})
+    assert response.status_code == 403
