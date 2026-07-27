@@ -47,6 +47,26 @@ services:
     depends_on:
       - stock-db-service
 
+  backoffice:
+    build:
+      context: ${PWD}
+      dockerfile: Dockerfile.backoffice
+    environment:
+      # Using syntax providing default value as fallback,
+      # :- means "use that if target is Undefined OR empty"
+      - DB_HBNTORY_BASENAME=${DB_HBNTORY_BASENAME:-holberton_inventory}
+      # No default because is essential info should always be provided
+      - DB_HBNTORY_USER_PWD=${DB_HBNTORY_USER_PWD}
+      - DB_HBNTORY_USER_ID=${DB_HBNTORY_USER_ID}
+      - DB_HOST=stock-db-service
+      - DB_PORT=3306
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ALGORITHM=${JWT_SECRET:-HS256}
+      - JWT_EXPIRE_MINUTES=${JWT_EXPIRE_MINUTES:-60}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - stock-db-service
 
 volumes:
   stock_db_data:
