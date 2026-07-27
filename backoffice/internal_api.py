@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 from database import get_db
 # Gets the functions defining CRUD operations
 import crud
+# Pydantic models
+from api_models import StockOut
 
 load_dotenv()
 app = FastAPI(title="HbNTory Backoffice Internal API")
@@ -35,6 +37,19 @@ def get_stock(product_id: int, branch_id: int, db: Session = Depends(get_db)):
     return {"product_id": product_id, "branch_id": branch_id, "quantity": stock.quantity}
 
 
+@app.get("/internal/branches/{branch_id}/stock/{product_id}",
+         response_model=StockOut,
+         dependencies=[Depends(verify_internal_key)]
+)
+def read_stock(branch_id: int, product_id: int, db: Session = Depends(get_db)):
+    stock = crud.get_stock(db, product_id=product_id, branch_id=branch_id)
+    if stock is None:
+        return StockOut(branch_id=branch_id, product_id=product_id, quantity=0)
+    # Thanks to "response_model" FastAPI will automatically convert as StockOut
+    #   then as json body in Response.
+    return stock
+
+
 if __name__ == "__main__":
     from fastapi.testclient import TestClient
 
@@ -55,4 +70,3 @@ if __name__ == "__main__":
             headers={"X-API-KEY": INTERNAL_API_KEY or ""}
         )
         print("Auth passed, Status:", response_with_key.status_code)
-

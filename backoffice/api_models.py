@@ -4,6 +4,16 @@
 from pydantic import BaseModel, ConfigDict, Field
 from db_models import UserRole
 
+# ===== API models used for "GET" requests =====
+
+class StockOut(BaseModel):
+    """Representation of stock to serialize in Response's bodies as JSON"""
+    model_config = ConfigDict(from_attributes=True)
+
+    branch_id: int
+    product_id: int
+    quantity: int
+
 class UserOut(BaseModel):
     """UserOut as in user outputed for API consumption"""
 
