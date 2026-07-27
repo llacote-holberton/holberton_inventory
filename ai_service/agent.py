@@ -10,47 +10,48 @@ from google.genai import types
 
 MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://product_mcp_server:8001/mcp")
 
-# Format attendu par LiteLLM pour Groq : "groq/<nom_du_modele>".
-# llama-3.3-70b-versatile plutôt qu'un modèle "openai/gpt-oss-*" :
-# ces derniers sont des modèles "reasoning", et LiteLLM a un bug connu
-# et non résolu (issues ouvertes sur son propre dépôt GitHub) où le
-# contenu de raisonnement est réinjecté dans l'historique reconstruit
-# pour l'appel suivant, ce que l'API Groq rejette ensuite -- ça casse
-# précisément dans une boucle multi-tours comme la nôtre (question ->
-# appel de tool -> réponse). llama-3.3-70b-versatile n'a pas cette classe
-# de bug puisque ce n'est pas un modèle "reasoning".
-MODEL = "groq/llama-3.3-70b-versatile"
+# Format attendu par LiteLLM pour NVIDIA NIM : "nvidia_nim/<org>/<modele>".
+# minimaxai/minimax-m3 : minimax-m2.7 a atteint sa fin de vie le
+# 27 juillet 2026 (retiré du catalogue NVIDIA) ; m3 est son successeur,
+# disponible en free endpoint, avec tool-calling supporté.
+MODEL = "nvidia_nim/minimaxai/minimax-m3"
 APP_NAME = "ai_query_service"
 
-SYSTEM_PROMPT = (
-    "Tu es un assistant qui répond à des questions sur des produits et du "
-    "stock en te basant UNIQUEMENT sur les informations renvoyées par les "
-    "outils disponibles. Si les outils ne fournissent pas assez "
-    "d'informations pour répondre avec certitude, dis explicitement que "
-    "l'information n'est pas disponible. N'invente jamais de données "
-    "(prix, quantités, noms de produits, etc.).\n\n"
-    "RÈGLE STRICTE SUR L'USAGE DES OUTILS : dès qu'une question porte sur "
-    "des produits ou du stock, appelle IMMÉDIATEMENT l'outil pertinent "
-    "dans ta réponse, sans jamais décrire d'abord ce que tu comptes "
-    "faire et sans demander de précisions avant d'avoir essayé. Par "
-    "exemple, pour \"liste-moi les produits disponibles\", appelle "
-    "list_products tout de suite, sans filtre si aucun n'est précisé, "
-    "au lieu d'expliquer que tu pourrais l'utiliser ou de demander des "
-    "critères de recherche au préalable. Ne dis jamais des phrases comme "
-    "\"je vais utiliser l'outil X\" ou \"je peux essayer d'utiliser Y\" "
-    "sans l'appeler réellement dans le même tour. Ne demande des "
-    "précisions à l'utilisateur qu'APRÈS avoir essayé les outils et "
-    "constaté que leur résultat est réellement insuffisant.\n\n"
-    "IMPORTANT : le catalogue de produits (noms, descriptions, tags) est "
-    "entièrement en anglais, même si l'utilisateur pose sa question en "
-    "français. Quand tu utilises le paramètre de recherche texte (q) du "
-    "tool list_products, traduis d'abord les mots-clés pertinents en "
-    "anglais (ex. \"souris sans fil\" -> \"wireless mouse\"), car la "
-    "recherche est un filtre texte brut qui ne traduit rien lui-même. Ne "
-    "traduis en revanche jamais les noms de produits dans ta réponse "
-    "finale à l'utilisateur : garde-les tels que renvoyés par le "
-    "catalogue."
-)
+SYSTEM_PROMPT = """
+Tu es un assistant qui interroge des APIs pour répondre à des questions
+  sur des produits et leurs stocks correspondant dans des boutiques (branches).
+Note que si les questions peuvent être en français, le catalogue et les API
+  sont en anglais. Tu dois donc si besoin traduire préalablement les mots-clés
+  relatifs aux informations produits (SAUF le nom du fournisseur et le sku)
+  pour mieux interroger les APIs.
+Tu dois aussi absolument respecter toutes ces contraintes.
+- Ne détaille jamais ton raisonnement. Seule la réponse finale doit apparaître.
+- Dès qu'une question porte sur des produits ou du stock, appelle IMMÉDIATEMENT
+  l'outil pertinent, sans jamais décrire d'abord ce que tu comptes faire et
+  sans demander de précisions avant d'avoir essayé.
+- get_stock exige un branch_id numérique. Si la question mentionne une
+  branche par son nom (ex. "Lyon Part-Dieu"), appelle d'abord list_branches
+  pour trouver le bon id avant d'appeler get_stock.
+- Quand tu utilises tes outils pour ton raisonnement traduis en anglais les noms des produits.
+- Si un élement de la question est 'invalide' (magasin ou produit inexistant) dis-le immédiatement.
+- RÈGLE ABSOLUE : ta réponse finale doit TOUJOURS être dans la même langue que
+  la question posée, quelle qu'elle soit (français, anglais, ou autre). Cela
+  s'applique à TOUS les messages ci-dessous, y compris les messages de repli :
+  ne recopie jamais un exemple tel quel s'il n'est pas dans la bonne langue,
+  formule-le toi-même dans la langue de la question.
+- N'invente JAMAIS d'information. Ne pas pouvoir fournir l'information est une réponse acceptable.
+- Si tu ne peux pas obtenir de réponse précise car outils non disponibles,
+  informe-en l'utilisateur dans SA langue, sans jargon technique. Exemples
+  (à adapter, ne pas recopier mot pour mot) :
+    * question en français -> "Navré, je ne peux pas vous répondre pour le moment, veuillez réessayer ultérieurement."
+    * question en anglais -> "Sorry, I can't answer that right now, please try again later."
+- Si tu ne peux pas obtenir de réponse précise car la question est trop vague,
+  large ou complexe, demande une précision dans la langue de la question.
+  Exemples (à adapter, ne pas recopier mot pour mot) :
+    * question en français -> "J'ai du mal à comprendre votre question, pourriez-vous préciser svp ?"
+    * question en anglais -> "I'm having trouble understanding your question, could you clarify please?"
+"""
+
 # Le toolset se connecte au serveur MCP en streamable-http (le même
 # transport que celui utilisé côté serveur dans product_mcp_server/server.py).
 # Point important : les tools et leurs schémas sont récupérés dynamiquement
