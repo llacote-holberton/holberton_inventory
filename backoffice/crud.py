@@ -225,6 +225,11 @@ def list_branches(db: Session) -> list[Branch]:
     return db.scalars(all_branches_infos_stmt).all()
 
 
+def list_branches_ordered_by_label(db: Session):
+    ordered_branches_stmt = select(Branch).order_by(Branch.label)
+    return db.scalars(ordered_branches_stmt).all()
+
+
 # ========================= Quick & dirty self-tests =========================
 if __name__ == "__main__":
     # On the fly import just for quick and dirty "self-test"
@@ -308,4 +313,4 @@ if __name__ == "__main__":
         new_admin = create_user(users_session, user_name="test_admin", pwd_hash=new_admin_pwd_hash, role="admin")
 
     # users_crud_tests()
-    stock_crud_tests()
+    # stock_crud_tests()
