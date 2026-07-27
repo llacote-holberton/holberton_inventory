@@ -4,6 +4,7 @@
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
+import enum
 from sqlalchemy import String, Enum
 from sqlalchemy import ForeignKey, PrimaryKeyConstraint, CheckConstraint, Index
 from sqlalchemy.orm import relationship
@@ -36,9 +37,6 @@ class Stock(Base):
         CheckConstraint("quantity >=0", name="positive_stock"),
         Index("idx_stocks_by_pid", "product_id"),
     )
-
-
-import enum
 
 
 class UserRole(str, enum.Enum):
