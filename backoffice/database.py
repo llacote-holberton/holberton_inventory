@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Manages the authentication and session generation to MariaDB"""
 
 from os import getenv
@@ -24,8 +23,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-if __name__ == "__main__":
-    print(dir(get_db))
-    test = get_db()
