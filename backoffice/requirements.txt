@@ -1,0 +1,14 @@
+# --- Web Frameworks ---
+# To make an app defining APIs
+fastapi
+# To run above-mentioned app as asynchronous server
+uvicorn[standard]
+# To define CRUD operations on database in agnostic way
+sqlalchemy
+# To bridge aforementioned with the specific SQL engine chosen (MariaDB)
+pymysql
+# Essential to make app configurable using environment variables defined in a local file.
+python-dotenv
+# First is a simple, lightweight testing framework which requires the second to make requests.
+pytest
+httpx2
