@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Module defining backoffice database 'as SQLAlchemy Entities'"""
 
 from sqlalchemy.orm import DeclarativeBase
