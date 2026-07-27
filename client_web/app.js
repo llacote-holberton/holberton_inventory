@@ -1,4 +1,4 @@
-const AI_SERVICE_BASE = "http://localhost:8002";
+const AI_SERVICE_BASE = "http://localhost:8003";
 
 const form = document.getElementById("chat-form");
 const questionField = document.getElementById("question");
