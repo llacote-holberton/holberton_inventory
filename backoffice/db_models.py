@@ -31,7 +31,7 @@ class Branch(Base):
     #   behind the scene.
     # Will create a list of branches with only associated "active managers" 
     managers: Mapped[list["User"]] = relationship(
-        primaryjoin="and_(Branch.id == User.branch_id, User.role == 'MANAGER', User.is_active == True)",
+        primaryjoin="and_(Branch.id == User.branch_id, User.role == 'manager', User.is_active == True)",
         viewonly=True
     )
 

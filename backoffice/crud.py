@@ -174,4 +174,4 @@ def find_branches_by_name(db: Session, *, search_string: str) -> List[Branch]:
         .where(Branch.label.ilike(f"%{search_string}%"))
         .order_by(Branch.label)
     )
-    return list(db.scalars(stmt).all())
+    return list(db.scalars(matching_branches_stmt).all())
