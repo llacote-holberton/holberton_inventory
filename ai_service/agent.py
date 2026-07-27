@@ -8,7 +8,8 @@ from google.adk.sessions import InMemorySessionService
 from google.adk.tools.mcp_tool import McpToolset, StreamableHTTPConnectionParams
 from google.genai import types
 
-MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://product_mcp_server:8001/mcp")
+# http://product_mcp_server:8001/mcp name for if/when we expose as docker service
+MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://127.0.0.1:8001/mcp")
 
 # Format attendu par LiteLLM pour NVIDIA NIM : "nvidia_nim/<org>/<modele>".
 # minimaxai/minimax-m3 : minimax-m2.7 a atteint sa fin de vie le
@@ -58,23 +59,31 @@ Tu dois aussi absolument respecter toutes ces contraintes.
 # auprès du serveur MCP — un changement de signature côté server.py (comme
 # le passage de `product_id` à `id_or_sku` pour get_product_details) n'a
 # donc rien à modifier ici.
-_mcp_toolset = McpToolset(
-    connection_params=StreamableHTTPConnectionParams(url=MCP_SERVER_URL),
-)
-
-root_agent = LlmAgent(
-    # temperature=0 : recommandation officielle de Groq pour l'erreur
-    # "tool_use_failed" — une température plus basse rend le format de
-    # l'appel de fonction plus déterministe, donc moins sujet à un
-    # mélange de texte libre et de syntaxe de tool mal formée.
-    model=LiteLlm(model=MODEL, temperature=0),
-    name="product_stock_agent",
-    instruction=SYSTEM_PROMPT,
-    tools=[_mcp_toolset],
-)
+#_mcp_toolset = McpToolset(
+#    connection_params=StreamableHTTPConnectionParams(url=MCP_SERVER_URL),
+# )
+# Note: commented because now we reinstanciate runner on each request
+#   with fresh tools.
 
 _session_service = InMemorySessionService()
-_runner = Runner(agent=root_agent, app_name=APP_NAME, session_service=_session_service)
+
+
+def _create_runner() -> Runner:
+    """
+    Instancie un Toolset et un Agent frais connectés à l'event loop active.
+    """
+    mcp_toolset = McpToolset(
+        connection_params=StreamableHTTPConnectionParams(url=MCP_SERVER_URL),
+    )
+    
+    root_agent = LlmAgent(
+        model=LiteLlm(model=MODEL, temperature=0),
+        name="product_stock_agent",
+        instruction=SYSTEM_PROMPT,
+        tools=[mcp_toolset],
+    )
+    
+    return Runner(agent=root_agent, app_name=APP_NAME, session_service=_session_service)
 
 
 async def answer_question(question: str) -> str:
@@ -90,11 +99,10 @@ async def answer_question(question: str) -> str:
     await _session_service.create_session(
         app_name=APP_NAME, user_id=user_id, session_id=session_id
     )
-
+    runner = _create_runner()
     content = types.Content(role="user", parts=[types.Part(text=question)])
-
     final_text = "Je n'ai pas réussi à obtenir une réponse fiable, réessaie ta question."
-    async for event in _runner.run_async(
+    async for event in runner.run_async(
         user_id=user_id, session_id=session_id, new_message=content
     ):
         if event.is_final_response() and event.content and event.content.parts:
@@ -119,9 +127,10 @@ async def answer_question_stream(question: str):
         app_name=APP_NAME, user_id=user_id, session_id=session_id
     )
 
+    runner = _create_runner()
     content = types.Content(role="user", parts=[types.Part(text=question)])
 
-    async for event in _runner.run_async(
+    async for event in runner.run_async(
         user_id=user_id, session_id=session_id, new_message=content
     ):
         if event.content and event.content.parts:
