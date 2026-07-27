@@ -16,7 +16,12 @@ BACKOFFICE_API_URL = os.getenv("BACKOFFICE_API_URL", "http://localhost:8002")
 # même valeur que INTERNAL_API_KEY dans le .env du Backoffice.
 BACKOFFICE_API_KEY = os.getenv("BACKOFFICE_API_KEY", "")
 
-mcp = FastMCP("product-mcp-server", host="127.0.0.1", port=8001)
+mcp = FastMCP(
+    "product-mcp-server",
+    host="0.0.0.0",
+    port=int(os.getenv("PORT", 8001)),
+)
+
 
 # --------------------------------------------------------------------------
 # Structures de sortie (on ne renvoie que ce dont l'agent a besoin, pas tout
@@ -192,6 +197,93 @@ async def get_stock(product_id: int, branch_id: int) -> dict:
         )
     return resp.json()
 
+
+@mcp.tool()
+async def list_branches() -> list[dict]:
+    """
+    Liste toutes les branches (magasins) de l'entreprise, avec leur id et
+    leur nom. À utiliser quand l'agent a besoin de résoudre le nom d'une
+    branche mentionnée dans une question (ex. "Lyon Part-Dieu") vers son
+    branch_id, avant de pouvoir appeler get_stock. Ces données viennent
+    UNIQUEMENT du Backoffice.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{BACKOFFICE_API_URL}/internal/branches/list",
+                headers={"X-API-KEY": BACKOFFICE_API_KEY},
+            )
+    except httpx.RequestError as exc:
+        raise ProductAPIError(
+            f"Impossible de contacter le Backoffice ({BACKOFFICE_API_URL}) : {exc}"
+        ) from exc
+
+    if resp.status_code == 403:
+        raise ProductAPIError(
+            "Authentification refusée par le Backoffice (BACKOFFICE_API_KEY "
+            "incorrecte ou absente)."
+        )
+    if resp.status_code >= 400:
+        raise ProductAPIError(
+            f"Le Backoffice a répondu avec une erreur {resp.status_code}."
+        )
+    return resp.json()
+
+
+@mcp.tool()
+async def get_stocks_for_product(product_id: int):
+    """
+   Récupère pour un produit donné le détails des stocks par branche et la quantité totale disponible
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{BACKOFFICE_API_URL}/internal/products/{product_id}/stocks",
+                headers={"X-API-KEY": BACKOFFICE_API_KEY},
+            )
+    except httpx.RequestError as exc:
+        raise ProductAPIError(
+            f"Impossible de contacter le Backoffice ({BACKOFFICE_API_URL}) : {exc}"
+        ) from exc
+
+    if resp.status_code == 403:
+        raise ProductAPIError(
+            "Authentification refusée par le Backoffice (BACKOFFICE_API_KEY "
+            "incorrecte ou absente)."
+        )
+    if resp.status_code >= 400:
+        raise ProductAPIError(
+            f"Le Backoffice a répondu avec une erreur {resp.status_code}."
+        )
+    return resp.json()
+
+
+@mcp.tool()
+async def get_products_for_branch(branch_id: int) -> list[dict]: 
+    """
+    Liste tous les produits disponibles (en stock) pour la branche ciblée.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{BACKOFFICE_API_URL}/internal/branches/{branch_id}/stocks",
+                headers={"X-API-KEY": BACKOFFICE_API_KEY},
+            )
+    except httpx.RequestError as exc:
+        raise ProductAPIError(
+            f"Impossible de contacter le Backoffice ({BACKOFFICE_API_URL}) : {exc}"
+        ) from exc
+
+    if resp.status_code == 403:
+        raise ProductAPIError(
+            "Authentification refusée par le Backoffice (BACKOFFICE_API_KEY "
+            "incorrecte ou absente)."
+        )
+    if resp.status_code >= 400:
+        raise ProductAPIError(
+            f"Le Backoffice a répondu avec une erreur {resp.status_code}."
+        )
+    return resp.json()
 
 if __name__ == "__main__":
     # transport HTTP car ce service tourne dans son propre conteneur Docker,
