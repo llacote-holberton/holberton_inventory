@@ -13,7 +13,8 @@ from sqlalchemy.orm import mapped_column    # Required to "configure" a column
 from sqlalchemy import String, Enum
 # SQL Constraints
 from sqlalchemy import ForeignKey, PrimaryKeyConstraint, CheckConstraint, Index
-
+# Making easier to use "combined info" from several bases
+from sqlalchemy.orm import relationship
 
 class Base(DeclarativeBase):
     pass
@@ -25,6 +26,14 @@ class Branch(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     label: Mapped[str] = mapped_column(String(50), unique=True)
+    # Adding a "view only", "dynamically computed property"
+    #   letting SQLAlchemy do all the heavy lifting of "join on... where..."
+    #   behind the scene.
+    # Will create a list of branches with only associated "active managers" 
+    managers: Mapped[list["User"]] = relationship(
+        primaryjoin="and_(Branch.id == User.branch_id, User.role == 'MANAGER', User.is_active == True)",
+        viewonly=True
+    )
 
 
 class Stock(Base):

@@ -6,6 +6,9 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from db_models import Stock
 from db_models import User, UserRole
 from db_models import Branch
+# Required to exploit the "ORM managed relationship"
+#  cf the "managers" attributes in Branch model
+from sqlalchemy.orm import selectinload
 
 # ========================= STOCK RELATED CRUD =========================
 
@@ -228,6 +231,12 @@ def list_branches(db: Session) -> list[Branch]:
 def list_branches_ordered_by_label(db: Session):
     ordered_branches_stmt = select(Branch).order_by(Branch.label)
     return db.scalars(ordered_branches_stmt).all()
+
+
+def get_branches_with_active_managers(db: Session):
+    # Will automatically compute and fill the "managers" attribute for each Branch
+    stmt = select(Branch).options(selectinload(Branch.managers)).order_by(Branch.label)
+    return db.scalars(stmt).all()
 
 
 # ========================= Quick & dirty self-tests =========================
