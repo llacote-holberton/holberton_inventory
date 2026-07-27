@@ -31,10 +31,10 @@ services:
     ports:
       - "5000:5000"
 
-  bo-internal-api:
+  internal-api:
     build:
       context: ${PWD}
-      dockerfile: Dockerfile.bo_api
+      dockerfile: Dockerfile.internal_api
     environment:
       - DB_HBNTORY_BASENAME=${DB_HBNTORY_BASENAME}
       - DB_HBNTORY_USER_PWD=${DB_HBNTORY_USER_PWD}

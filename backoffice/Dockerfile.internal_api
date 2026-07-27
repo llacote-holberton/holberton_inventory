@@ -9,8 +9,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copying required files in n steps (for layered cache)
-COPY database.py models.py crud.py ./
-COPY internal_api.py ./
+# Everything related to database
+COPY database.py db_models.py crud.py ./
+# Everything related to internal_api
+COPY api_models.py internal_api.py ./
+# Related tests files
+COPY tests/test_internal_api.py ./tests/
 
 # Setting a command to be runned automatically when container starts
 CMD ["uvicorn", "internal_api:app", "--host", "0.0.0.0", "--port", "8002"]
