@@ -239,6 +239,17 @@ def get_branches_with_active_managers(db: Session):
     return db.scalars(stmt).all()
 
 
+def find_branches_by_name(db: Session, *, search_string: str) -> List[Branch]:
+    """Returns branches which label 'has' search_string, ordered by label"""
+    matching_branches_stmt = (
+        select(Branch)
+        # Warning don't forget 'insensitive case' option
+        .where(Branch.label.ilike(f"%{search_string}%"))
+        .order_by(Branch.label)
+    )
+    return list(db.scalars(stmt).all())
+
+
 # ========================= Quick & dirty self-tests =========================
 if __name__ == "__main__":
     # On the fly import just for quick and dirty "self-test"
