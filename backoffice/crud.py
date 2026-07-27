@@ -111,11 +111,6 @@ def list_stocks_for_branch(db: Session, * , branch_id: int) -> list[Stock]:
     return db.scalars(all_stocks_for_branch_stmt).all()
 
 
-def list_branches(db: Session) -> list[Branch]:
-    all_branches_infos_stmt = select(Branch)
-    return db.scalars(all_branches_infos_stmt).all()
-
-
 # ==== TESTMETHODS (FIXME check if can be removed once automated tests ====
 # WARNING: ONLY USE FOR INTERNAL TESTS, do NOT EXPOSE.
 def set_stock(db: Session, *, product_id: int, branch_id: int, quantity: int) -> int:
@@ -190,6 +185,7 @@ def get_user_by_name(db: Session, user_name: str):
     # Scalar unwraps the first element so we directly have the User "inside".
     return matching_usr
 
+
 # Note: because we try to keep the principle that CRUD methods just
 #  interact with database with "prepared values", this method requires
 #  an already hashed password "ready to store".
@@ -221,6 +217,12 @@ def set_user_active_state(db: Session, *, user_id: int, is_active: bool) -> bool
     db.commit()
     # If no row means user_id didn't exist
     return result.rowcount > 0
+
+
+# ========================= BRANCHES RELATED CRUD =========================
+def list_branches(db: Session) -> list[Branch]:
+    all_branches_infos_stmt = select(Branch)
+    return db.scalars(all_branches_infos_stmt).all()
 
 
 # ========================= Quick & dirty self-tests =========================
