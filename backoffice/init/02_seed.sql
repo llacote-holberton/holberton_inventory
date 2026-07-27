@@ -63,8 +63,8 @@ VALUES
     -- Case: product_id 4 HB-MON-2102 having stocks in Toulouse (1, 2) and Paris (5),
     --       total should be 15+8+7 = 30
     (1, 4, 15),
-    (1, 4, 8),
-    (1, 4, 7),
+    (2, 4, 8),
+    (5, 4, 7),
     -- SHOWS that check on quantity works, will not be inserted
     (1, 35, -6),
     -- SHOWS that check on branch_id works, will not be inserted
