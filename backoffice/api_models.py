@@ -14,6 +14,14 @@ class StockOut(BaseModel):
     product_id: int
     quantity: int
 
+
+class ProductStockSummary(BaseModel):
+    """Wrapper to add 'total stock' on top of detail of stocks by branches"""
+    product_id: int
+    total_quantity: int
+    details: list[StockOut]
+
+
 class UserOut(BaseModel):
     """UserOut as in user outputed for API consumption"""
 

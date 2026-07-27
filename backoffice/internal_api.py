@@ -12,7 +12,7 @@ from database import get_db
 # Gets the functions defining CRUD operations
 import crud
 # Pydantic models
-from api_models import StockOut
+from api_models import StockOut, ProductStockSummary
 
 load_dotenv()
 app = FastAPI(title="HbNTory Backoffice Internal API")
@@ -48,6 +48,24 @@ def read_stock(branch_id: int, product_id: int, db: Session = Depends(get_db)):
     # Thanks to "response_model" FastAPI will automatically convert as StockOut
     #   then as json body in Response.
     return stock
+
+
+@app.get(
+    "/internal/products/{product_id}/stocks",
+    response_model=ProductStockSummary,
+    dependencies=[Depends(verify_internal_key)]
+)
+def product_get_all_stocks(product_id: int, db: Session = Depends(get_db)):
+    """Returns a combined object with detailed stock per branch and total"""
+    # We use a prepared request dedicated to this use @FIXME IMPLEMENT IT
+    product_stocks = crud.list_stocks_for_product(db, product_id=product_id)
+    # Then instanciate the API model which will be automatically serialized.
+    return ProductStockSummary(
+        product_id=product_id,
+        total_quantity = sum(stock.quantity for stock in product_stocks),
+        details = product_stocks
+    )
+
 
 
 if __name__ == "__main__":

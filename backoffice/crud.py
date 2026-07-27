@@ -97,6 +97,16 @@ def remove_stock(db: Session, branch_id: int,
     raise InsufficientStockError(available=stock.quantity)
 
 
+# ==== "Global Stock read methods" (used by Internal API) ====
+# Reminder: signature with list return works natively from >=3.9
+def list_stocks_for_product(db: Session, *, product_id: int) -> list[Stock]:
+    all_product_stocks_stmt = select(Stock).where(Stock.product_id == product_id)
+    # Reminder: no need for try since it's a read only, worse case returns empty list.
+    return db.scalars(all_product_stocks_stmt).all()
+
+
+
+# ==== TESTMETHODS (FIXME check if can be removed once automated tests ====
 # WARNING: ONLY USE FOR INTERNAL TESTS, do NOT EXPOSE.
 def set_stock(db: Session, *, product_id: int, branch_id: int, quantity: int) -> int:
     """(re)Sets the quantity for a given stock — usage : setup/reset entre tests"""
@@ -245,6 +255,11 @@ if __name__ == "__main__":
             # Test adds new line
             set_stock(db, product_id=35, branch_id=5, quantity=500)
 
+            # === INTERNAL API's related methods
+            # Attempt to get all stock for product of id 4
+            details = list_stocks_for_product(db, product_id=4)
+            print(details)
+
             # === REMOVE OPERATIONS ===
             # Reduce stock just created from 500 to 400
             remove_stock(db, product_id=35, branch_id=5, amount=100)
@@ -255,6 +270,7 @@ if __name__ == "__main__":
             remove_stock(db, product_id=6, branch_id=4, amount=9999)
             # Attempt to reduce inexisting stock
             remove_stock(db, product_id=666, branch_id=666, amount=666)
+
         except Exception as e:
             print(e)
         finally:
@@ -279,4 +295,5 @@ if __name__ == "__main__":
         new_admin_pwd_hash = hash_password("admin_password")
         new_admin = create_user(users_session, user_name="test_admin", pwd_hash=new_admin_pwd_hash, role="admin")
 
-    users_crud_tests()
+    # users_crud_tests()
+    stock_crud_tests()
