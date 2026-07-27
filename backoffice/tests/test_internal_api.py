@@ -123,3 +123,22 @@ def test_get_stock_with_wrong_api_key_returns_error(stock_data):
     assert response.status_code in (401, 403)
 
 
+# ---- GET /internal/products/{product_id}/stocks ----
+def test_stock_by_product_across_branches(stock_data):
+    response = client.get("/internal/products/6/stocks", headers=VALID_HEADERS)
+    assert response.status_code == 200
+    result = response.json()
+    assert result["product_id"] == 6
+    assert result["total_quantity"] == 70  # 15 + 55
+    assert len(result["details"]) == 2
+    branch_ids = {entry["branch_id"] for entry in result["details"]}
+    assert branch_ids == {1, 4}
+
+
+def test_stock_by_product_with_no_stock_returns_empty_summary(two_branches):
+    response = client.get("/internal/products/999/stocks", headers=VALID_HEADERS)
+    assert response.status_code == 200
+    result = response.json()
+    assert result["product_id"] == 999
+    assert result["total_quantity"] == 0
+    assert result["details"] == []
