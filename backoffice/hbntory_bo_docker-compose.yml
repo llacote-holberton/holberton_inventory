@@ -21,7 +21,7 @@ services:
       - stock_db_data:/var/lib/mysql
       - ${PWD}/init:/docker-entrypoint-initdb.d
 
-# Exposes detailed information for all products potentially available in company's stores
+  # Exposes detailed information for all products potentially available in company's stores
   products-api:
     build:
       context: https://github.com/hbtn-edu/hbntory-products-api.git#08497b1263a39aaddaf43a405722cbe93fc25b78
@@ -47,6 +47,26 @@ services:
     depends_on:
       - stock-db-service
 
+  backoffice:
+    build:
+      context: ${PWD}
+      dockerfile: Dockerfile.backoffice
+    environment:
+      # Using syntax providing default value as fallback,
+      # :- means "use that if target is Undefined OR empty"
+      - DB_HBNTORY_BASENAME=${DB_HBNTORY_BASENAME:-holberton_inventory}
+      # No default because is essential info should always be provided
+      - DB_HBNTORY_USER_PWD=${DB_HBNTORY_USER_PWD}
+      - DB_HBNTORY_USER_ID=${DB_HBNTORY_USER_ID}
+      - DB_HOST=stock-db-service
+      - DB_PORT=3306
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ALGORITHM=${JWT_SECRET:-HS256}
+      - JWT_EXPIRE_MINUTES=${JWT_EXPIRE_MINUTES:-60}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - stock-db-service
 
 volumes:
   stock_db_data:

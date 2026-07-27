@@ -9,6 +9,10 @@ sqlalchemy
 pymysql
 # Essential to make app configurable using environment variables defined in a local file.
 python-dotenv
+# Used (for now) to secure the user passwords by hashing them (may be replaced by argon2id).
+bcrypt
+# Used in context of Backoffice API to allow HTTP token based user authentication
+pyjwt
 # First is a simple, lightweight testing framework which requires the second to make requests.
 pytest
 httpx2
