@@ -142,3 +142,21 @@ def test_stock_by_product_with_no_stock_returns_empty_summary(two_branches):
     assert result["product_id"] == 999
     assert result["total_quantity"] == 0
     assert result["details"] == []
+
+
+
+# ---- GET /internal/branches/{branch_id}/stock ----
+def test_stock_by_branch_lists_all_products(stock_data):
+    response = client.get("/internal/branches/4/stocks", headers=VALID_HEADERS)
+    assert response.status_code == 200
+    results = response.json()
+    assert len(results) == 2
+    product_ids = {r["product_id"] for r in results}
+    assert product_ids == {6, 2}
+
+
+def test_stock_by_branch_with_no_stock_returns_empty_list(two_branches):
+    response = client.get("/internal/branches/1/stocks", headers=VALID_HEADERS)
+    assert response.status_code == 200
+    assert response.json() == []
+

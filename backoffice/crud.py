@@ -105,6 +105,10 @@ def list_stocks_for_product(db: Session, *, product_id: int) -> list[Stock]:
     return db.scalars(all_product_stocks_stmt).all()
 
 
+def list_stocks_for_branch(db: Session, * , branch_id: int) -> list[Stock]:
+    all_stocks_for_branch_stmt = select(Stock).where(Stock.branch_id == branch_id)
+    return db.scalars(all_stocks_for_branch_stmt).all()
+
 
 # ==== TESTMETHODS (FIXME check if can be removed once automated tests ====
 # WARNING: ONLY USE FOR INTERNAL TESTS, do NOT EXPOSE.

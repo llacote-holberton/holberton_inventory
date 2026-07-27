@@ -67,6 +67,13 @@ def product_get_all_stocks(product_id: int, db: Session = Depends(get_db)):
     )
 
 
+@app.get("/internal/branches/{branch_id}/stocks",
+         response_model= list[StockOut],
+         dependencies=[Depends(verify_internal_key)]
+)
+def branch_get_all_stocks(branch_id: int, db: Session = Depends(get_db)):
+    return crud.list_stocks_for_branch(db, branch_id=branch_id)
+
 
 if __name__ == "__main__":
     from fastapi.testclient import TestClient
