@@ -65,7 +65,7 @@ services:
       - DB_HOST=stock-db-service
       - DB_PORT=3306
       - JWT_SECRET=${JWT_SECRET}
-      - JWT_ALGORITHM=${JWT_SECRET:-HS256}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
       - JWT_EXPIRE_MINUTES=${JWT_EXPIRE_MINUTES:-60}
     ports:
       - "8000:8000"
