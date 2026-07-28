@@ -19,7 +19,7 @@ services:
       - "${DB_PORT}:3306"
     volumes:
       - stock_db_data:/var/lib/mysql
-      - ${PWD}/init:/docker-entrypoint-initdb.d
+      - ${PWD}/backoffice/init:/docker-entrypoint-initdb.d
 
   # Exposes detailed information for all products potentially available in company's stores
   products-api:
@@ -33,8 +33,12 @@ services:
 
   internal-api:
     build:
-      context: ${PWD}
+      context: ${PWD}/backoffice
       dockerfile: Dockerfile.internal_api
+      # WARNING: using this would probably mess with COPY instructions inside
+      #   because would be evaluated from "context" which would be one level too high.
+      # context: ${PWD}
+      # dockerfile: ./backoffice/Dockerfile.internal_api
     environment:
       - DB_HBNTORY_BASENAME=${DB_HBNTORY_BASENAME}
       - DB_HBNTORY_USER_PWD=${DB_HBNTORY_USER_PWD}
@@ -49,7 +53,7 @@ services:
 
   backoffice:
     build:
-      context: ${PWD}
+      context: ${PWD}/backoffice
       dockerfile: Dockerfile.backoffice
     environment:
       # Using syntax providing default value as fallback,
