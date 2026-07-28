@@ -29,9 +29,11 @@ services:
       context: https://github.com/hbtn-edu/hbntory-products-api.git#08497b1263a39aaddaf43a405722cbe93fc25b78
     image: hbntory_products_api:latest
     container_name: ${COMPOSE_PROJECT_NAME}-products-api
+    environment:
+      - HBN_PRODUCTS_PORT=${HBN_PRODUCTS_PORT:-5000}
     restart: unless-stopped
     ports:
-      - "${PRODUCTS_API_PORT:-5000}:${PRODUCTS_API_PORT:-5000}"
+      - "${PRODUCTS_API_PORT:-5000}:${HBN_PRODUCTS_PORT:-5000}"
 
   internal-api:
     build:
@@ -99,7 +101,9 @@ services:
         # Deactivated, not useful for our context and could bring confusion
         # CONFIGURATION to access Product API
         - PRODUCTS_API_HOST=products-api
-        - PRODUCTS_API_PORT=${PRODUCTS_API_PORT:-5000}
+        # Now that we expose the actual variable used in external API dockerfile
+        #   we must "target it" here too. ${PRODUCTS_API_PORT} -> ${HBN_PRODUCTS_PORT}
+        - PRODUCTS_API_PORT=${HBN_PRODUCTS_PORT:-5000}
         - INTERNAL_API_HOST=internal-api
         - INTERNAL_API_PORT=${INTERNAL_API_PORT:-8002}
         - INTERNAL_API_KEY=${INTERNAL_API_KEY}
