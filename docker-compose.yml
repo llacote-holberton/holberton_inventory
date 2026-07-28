@@ -52,7 +52,7 @@ services:
       - DB_PORT=3306
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
     ports:
-      - "8002:8002"
+      - "${INTERNAL_API_PORT:-8002}:${INTERNAL_API_PORT:-8002}"
     depends_on:
       - stocks-db
 
