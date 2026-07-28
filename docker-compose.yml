@@ -78,7 +78,7 @@ services:
       - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
       - JWT_EXPIRE_MINUTES=${JWT_EXPIRE_MINUTES:-60}
     ports:
-      - "8000:8000"
+      - "${BACKOFFICE_PORT}:${BACKOFFICE_PORT}"
     depends_on:
       - stocks-db
 
