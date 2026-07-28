@@ -6,9 +6,9 @@ name: ${COMPOSE_PROJECT_NAME}
 
 services:
   # Holds the data pertaining quantities of products per store.
-  stock-db-service:
+  stocks-db:
     image: mariadb:latest
-    container_name: hbntory-stock-db-service # Mandatory to avoid -n suffix for scaling
+    container_name: ${COMPOSE_PROJECT_NAME}-stocks-db # Mandatory to avoid -n suffix for scaling
     environment:
       - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       # MariaDB_USER is automatically understood as "database admin" so all permissions granted.
@@ -26,7 +26,7 @@ services:
     build:
       context: https://github.com/hbtn-edu/hbntory-products-api.git#08497b1263a39aaddaf43a405722cbe93fc25b78
     image: hbntory_products_api:latest
-    container_name: hbntory-products-api
+    container_name: ${COMPOSE_PROJECT_NAME}-products-api
     restart: unless-stopped
     ports:
       - "5000:5000"
@@ -39,22 +39,28 @@ services:
       #   because would be evaluated from "context" which would be one level too high.
       # context: ${PWD}
       # dockerfile: ./backoffice/Dockerfile.internal_api
+    container_name: ${COMPOSE_PROJECT_NAME}-internal-api
     environment:
-      - DB_HBNTORY_BASENAME=${DB_HBNTORY_BASENAME}
+      - DB_HBNTORY_BASENAME=${DB_HBNTORY_BASENAME:-holberton_inventory}
       - DB_HBNTORY_USER_PWD=${DB_HBNTORY_USER_PWD}
       - DB_HBNTORY_USER_ID=${DB_HBNTORY_USER_ID}
-      - DB_HOST=stock-db-service
+      # No need to prefix with COMPOSE_PROJECT_NAME / use container_name here:
+      #   Docker's internal DNS also resolves hostnames from the service name alone,
+      #   which is more robust (doesn't break if container_name changes later).
+      # - DB_HOST=${COMPOSE_PROJECT_NAME}-stocks-db
+      - DB_HOST=stocks-db
       - DB_PORT=3306
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
     ports:
       - "8002:8002"
     depends_on:
-      - stock-db-service
+      - stocks-db
 
   backoffice:
     build:
       context: ${PWD}/backoffice
       dockerfile: Dockerfile.backoffice
+    container_name: ${COMPOSE_PROJECT_NAME}-backoffice
     environment:
       # Using syntax providing default value as fallback,
       # :- means "use that if target is Undefined OR empty"
@@ -62,7 +68,7 @@ services:
       # No default because is essential info should always be provided
       - DB_HBNTORY_USER_PWD=${DB_HBNTORY_USER_PWD}
       - DB_HBNTORY_USER_ID=${DB_HBNTORY_USER_ID}
-      - DB_HOST=stock-db-service
+      - DB_HOST=stocks-db
       - DB_PORT=3306
       - JWT_SECRET=${JWT_SECRET}
       - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
@@ -70,9 +76,9 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - stock-db-service
+      - stocks-db
 
-  mcp_server:
+  mcp-server:
       build:
         context: ${PWD}/product_mcp_server
         dockerfile: Dockerfile.mcp_server
@@ -80,10 +86,10 @@ services:
         #   as the environment variables are not exploitable directly there.
         args:
           MCP_SERVER_PORT: ${MCP_SERVER_PORT:-8001}
-      container_name: hbntory-mcp-server
+      container_name: ${COMPOSE_PROJECT_NAME}-mcp-server
       ports:
         # Warning: right side port must match port(s) exposed in DockerFile
-        - ${MCP_SERVER_PORT:-8001}:${MCP_SERVER_PORT:-8001}
+        - "${MCP_SERVER_PORT:-8001}:${MCP_SERVER_PORT:-8001}"
       environment:
         - MCP_SERVER_PORT=${MCP_SERVER_PORT:-8001}
         # Kept for now in case of, but hardcoded in Python to ensure it listens to all.
@@ -95,18 +101,18 @@ services:
       #  - hbntory_net
       restart: unless-stopped
 
-  ai_service:
+  ai-service:
     build:
       context: ${PWD}/ai_service
       dockerfile: Dockerfile.ai_service
-    container_name: hbntory-ai-service
+    container_name: ${COMPOSE_PROJECT_NAME}-ai-service
     ports:
       - "${AI_SERVICE_PORT:-8003}:8003"
     environment:
       - AI_SERVICE_PORT=${AI_SERVICE_PORT:-8003}
       # Name of docker service since we are within same network.
       # Here it is not read from .env since it depends on this file's own structure.
-      - MCP_SERVER_HOST=mcp_server
+      - MCP_SERVER_HOST=mcp-server
       # Reusing the variable to ensure we request to the right port.
       - MCP_SERVER_PORT=${MCP_SERVER_PORT:-8001}
       # Model agnostic configuration (name and if need be API key)
@@ -119,14 +125,14 @@ services:
       # Others during run because it has features still in "experimental stage".
       - PYTHONWARNINGS=ignore
     depends_on:
-      - mcp_server
+      - mcp-server
     restart: unless-stopped
 
-  web_client:
+  web-client:
     build:
       context: ${PWD}/client_web
       dockerfile: Dockerfile.client_web
-    container_name: hbntory-web-client
+    container_name: ${COMPOSE_PROJECT_NAME}-web-client
     ports:
       - "${CLIENT_PORT:-8080}:${CLIENT_PORT:-8080}"
     environment:
@@ -135,7 +141,7 @@ services:
       #   to set here so that the javascript app knows how to reach
       #   other Docker services, but in a first step I just want "service up".
     depends_on:
-      - ai_service
+      - ai-service
     restart: unless-stopped
 
 
