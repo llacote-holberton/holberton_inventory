@@ -1,0 +1,44 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HBntory — Stock de ma branche</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wordmark">HBNTORY</div>
+    <nav class="topnav">
+      <a href="index.html">Home</a>
+      <a href="../client_web/index.html" class="nav-accent">Consulter l'Agent IA</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <h1>Stock de ma branche</h1>
+
+    <section class="ticket">
+      <p class="ticket-label">Ajouter un produit au stock</p>
+      <form id="new-stock-form" class="inline-form">
+        <input type="text" id="new-product-id" placeholder="Identifiant ou SKU du produit" required>
+        <input type="number" id="new-product-qty" min="1" value="1" required>
+        <button type="submit" class="add">Ajouter au stock</button>
+      </form>
+    </section>
+
+    <h2 class="section-title">Stock actuel</h2>
+    <div id="stock-list" class="stock-list">
+      <p class="placeholder">Chargement du stock…</p>
+    </div>
+  </main>
+
+  <footer class="footbar">
+    <span>© 2026 HBntory</span>
+    <a href="#">Legal</a>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
