@@ -10,3 +10,6 @@ litellm
 pydantic
 # Used to exploit environment variables
 python-dotenv
+# Used for minimal python-driven tests
+pytest
+httpx2
