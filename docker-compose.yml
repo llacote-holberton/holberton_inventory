@@ -115,6 +115,22 @@ services:
       - mcp_server
     restart: unless-stopped
 
+  web_client:
+    build:
+      context: ${PWD}/client_web
+      dockerfile: Dockerfile.client_web
+    container_name: hbntory-web-client
+    ports:
+      - "${CLIENT_PORT:-8080}:${CLIENT_PORT:-8080}"
+    environment:
+      - CLIENT_PORT=${CLIENT_PORT:-8080}
+      # FIXME There will certainly be other environment variables
+      #   to set here so that the javascript app knows how to reach
+      #   other Docker services, but in a first step I just want "service up".
+    depends_on:
+      - ai_service
+    restart: unless-stopped
+
 
 volumes:
   stock_db_data:
