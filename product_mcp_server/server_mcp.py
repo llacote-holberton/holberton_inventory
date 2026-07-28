@@ -1,8 +1,10 @@
 import os
+from dotenv import load_dotenv
 import httpx
 from pydantic import BaseModel
 from mcp.server.fastmcp import FastMCP
 
+load_dotenv()
 # Par défaut : accès direct au conteneur de l'API Produit, tel que mappé
 # par le docker-compose du Backoffice (port hôte 5000, confirmé via
 # `docker ps` : 0.0.0.0:5000->5000/tcp). Si product_mcp_server tourne
@@ -18,8 +20,11 @@ BACKOFFICE_API_KEY = os.getenv("BACKOFFICE_API_KEY", "")
 
 mcp = FastMCP(
     "product-mcp-server",
+    # Hardcoded with special value ensuring it listens to any connexion 
+    #  from anywhere (local/external).
     host="0.0.0.0",
-    port=int(os.getenv("PORT", 8001)),
+    # Soft-coded to allow alteration as needed in Docker compose.
+    port=int(os.getenv("MCP_SERVER_PORT", 8001)),
 )
 
 

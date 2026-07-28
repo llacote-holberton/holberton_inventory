@@ -72,6 +72,29 @@ services:
     depends_on:
       - stock-db-service
 
+  mcp_server:
+      build:
+        context: ${PWD}/product_mcp_server
+        dockerfile: Dockerfile.mcp_server
+        # Only way to transmit dynamic values to the Dockerfile
+        #   as the environment variables are not exploitable directly there.
+        args:
+          MCP_SERVER_PORT: ${MCP_SERVER_PORT:-8001}
+      container_name: hbntory-mcp-server
+      ports:
+        # Warning: right side port must match port(s) exposed in DockerFile
+        - ${MCP_SERVER_PORT:-8001}:${MCP_SERVER_PORT:-8001}
+      environment:
+        - MCP_SERVER_PORT=${MCP_SERVER_PORT:-8001}
+        # Kept for now in case of, but hardcoded in Python to ensure it listens to all.
+        - MCP_SERVER_HOST=0.0.0.0
+      # Suggested by AI to better control networks but overkill for us for now,
+      #   bad "complexity/benefit" ratio, will be kept as potential security improvement.
+      # networks:
+      #  - hbntory_net
+      restart: unless-stopped
+
+
 volumes:
   stock_db_data:
     # driver: local
