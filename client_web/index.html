@@ -1,0 +1,52 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HBntory — Assistant Produits &amp; Stock</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wordmark">HBNTORY</div>
+    <nav class="topnav">
+      <a href="index.html">Home</a>
+      <a href="../manager_web/index.html" class="nav-accent">Accéder au Back</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <h1>Posez une question sur nos produits et notre stock</h1>
+
+    <div class="ticket tips">
+      <p class="ticket-label">Astuces</p>
+      <ul>
+        <li>« Quelle branche a du stock du produit X ? »</li>
+        <li>« Quels produits sont disponibles dans la branche Y ? »</li>
+        <li>« Si je veux acheter 3 unités de X et 2 de Y, où dois-je aller ? »</li>
+        <li>« Donne-moi les détails du produit XX. »</li>
+      </ul>
+    </div>
+
+    <form id="chat-form" class="ask-form">
+      <textarea id="question" rows="3" placeholder="Tapez votre question ici..." required></textarea>
+      <button type="submit">Envoyer</button>
+    </form>
+
+    <section class="ticket response">
+      <p class="ticket-label">Réponse</p>
+      <div id="response-box" class="response-box">
+        <p class="placeholder">La réponse de l'IA s'affichera ici.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footbar">
+    <span>© 2026 HBntory</span>
+    <a href="#">Legal</a>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
