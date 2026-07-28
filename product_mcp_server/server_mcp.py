@@ -11,12 +11,23 @@ load_dotenv()
 # lui-même dans le même réseau Compose, passer
 # PRODUCT_API_URL=http://external-products-api:5000 à la place (ou le
 # nom de service réel du conteneur, ex. products-api).
-PRODUCT_API_URL = os.getenv("PRODUCT_API_URL", "http://localhost:5000")
-BACKOFFICE_API_URL = os.getenv("BACKOFFICE_API_URL", "http://localhost:8002")
+PRODUCTS_API_URL = "".join([
+    "http://",
+    os.getenv("PRODUCTS_API_HOST", "localhost"),
+    ':',
+    os.getenv("PRODUCTS_API_PORT", "5000")
+])
+INTERNAL_API_URL = "".join([
+    "http://",
+    os.getenv("INTERNAL_API_HOST", "localhost"),
+    ':',
+    os.getenv("INTERNAL_API_PORT", "8002")
+])
 # Clé attendue par le header X-API-KEY de l'API interne du Backoffice
 # (voir backoffice/internal_api.py : verify_internal_key). Doit être la
 # même valeur que INTERNAL_API_KEY dans le .env du Backoffice.
-BACKOFFICE_API_KEY = os.getenv("BACKOFFICE_API_KEY", "")
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY")
+# NO FALLBACK. @fixme Should raise an exception of no or empty value found.
 
 mcp = FastMCP(
     "product-mcp-server",
@@ -83,10 +94,10 @@ async def _request_product_api(path: str, params: dict | None = None) -> httpx.R
     """
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(f"{PRODUCT_API_URL}{path}", params=params)
+            resp = await client.get(f"{PRODUCTS_API_URL}{path}", params=params)
     except httpx.RequestError as exc:
         raise ProductAPIError(
-            f"Impossible de contacter l'API Produit ({PRODUCT_API_URL}) : {exc}"
+            f"Impossible de contacter l'API Produit ({PRODUCTS_API_URL}) : {exc}"
         ) from exc
 
     if resp.status_code >= 400:
@@ -182,18 +193,18 @@ async def get_stock(product_id: int, branch_id: int) -> dict:
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.get(
-                f"{BACKOFFICE_API_URL}/internal/stock",
+                f"{INTERNAL_API_URL}/internal/stock",
                 params=params,
-                headers={"X-API-KEY": BACKOFFICE_API_KEY},
+                headers={"X-API-KEY": INTERNAL_API_KEY},
             )
     except httpx.RequestError as exc:
         raise ProductAPIError(
-            f"Impossible de contacter le Backoffice ({BACKOFFICE_API_URL}) : {exc}"
+            f"Impossible de contacter le Backoffice ({INTERNAL_API_URL}) : {exc}"
         ) from exc
 
     if resp.status_code == 403:
         raise ProductAPIError(
-            "Authentification refusée par le Backoffice (BACKOFFICE_API_KEY "
+            "Authentification refusée par le Backoffice (INTERNAL_API_KEY "
             "incorrecte ou absente)."
         )
     if resp.status_code >= 400:
@@ -215,17 +226,17 @@ async def list_branches() -> list[dict]:
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.get(
-                f"{BACKOFFICE_API_URL}/internal/branches/list",
-                headers={"X-API-KEY": BACKOFFICE_API_KEY},
+                f"{INTERNAL_API_URL}/internal/branches/list",
+                headers={"X-API-KEY": INTERNAL_API_KEY},
             )
     except httpx.RequestError as exc:
         raise ProductAPIError(
-            f"Impossible de contacter le Backoffice ({BACKOFFICE_API_URL}) : {exc}"
+            f"Impossible de contacter le Backoffice ({INTERNAL_API_URL}) : {exc}"
         ) from exc
 
     if resp.status_code == 403:
         raise ProductAPIError(
-            "Authentification refusée par le Backoffice (BACKOFFICE_API_KEY "
+            "Authentification refusée par le Backoffice (INTERNAL_API_KEY "
             "incorrecte ou absente)."
         )
     if resp.status_code >= 400:
@@ -243,17 +254,17 @@ async def get_stocks_for_product(product_id: int):
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.get(
-                f"{BACKOFFICE_API_URL}/internal/products/{product_id}/stocks",
-                headers={"X-API-KEY": BACKOFFICE_API_KEY},
+                f"{INTERNAL_API_URL}/internal/products/{product_id}/stocks",
+                headers={"X-API-KEY": INTERNAL_API_KEY},
             )
     except httpx.RequestError as exc:
         raise ProductAPIError(
-            f"Impossible de contacter le Backoffice ({BACKOFFICE_API_URL}) : {exc}"
+            f"Impossible de contacter le Backoffice ({INTERNAL_API_URL}) : {exc}"
         ) from exc
 
     if resp.status_code == 403:
         raise ProductAPIError(
-            "Authentification refusée par le Backoffice (BACKOFFICE_API_KEY "
+            "Authentification refusée par le Backoffice (INTERNAL_API_KEY "
             "incorrecte ou absente)."
         )
     if resp.status_code >= 400:
@@ -271,17 +282,17 @@ async def get_products_for_branch(branch_id: int) -> list[dict]:
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.get(
-                f"{BACKOFFICE_API_URL}/internal/branches/{branch_id}/stocks",
-                headers={"X-API-KEY": BACKOFFICE_API_KEY},
+                f"{INTERNAL_API_URL}/internal/branches/{branch_id}/stocks",
+                headers={"X-API-KEY": INTERNAL_API_KEY},
             )
     except httpx.RequestError as exc:
         raise ProductAPIError(
-            f"Impossible de contacter le Backoffice ({BACKOFFICE_API_URL}) : {exc}"
+            f"Impossible de contacter le Backoffice ({INTERNAL_API_URL}) : {exc}"
         ) from exc
 
     if resp.status_code == 403:
         raise ProductAPIError(
-            "Authentification refusée par le Backoffice (BACKOFFICE_API_KEY "
+            "Authentification refusée par le Backoffice (INTERNAL_API_KEY "
             "incorrecte ou absente)."
         )
     if resp.status_code >= 400:
