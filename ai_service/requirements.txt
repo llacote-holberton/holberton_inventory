@@ -1,6 +1,12 @@
+# Python framework to quickly set up API exposable through HTTP
 fastapi
+# Async HTTP server to expose aforementioned apis.
 uvicorn[standard]
+# Frameworks to set up AI Agents in agnostic way
+#   (can change model on the fly, same process)
 google-adk[mcp]
 litellm
+# Used to define Data Transfer Objects to simplify exchanges.
 pydantic
+# Used to exploit environment variables
 python-dotenv
