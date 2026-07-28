@@ -16,7 +16,7 @@ load_dotenv()
 # Outside "Docker compose context" -> 127.0.0.1:8001
 # Within "Docker compose context"  -> mcp_server:8001 
 #   (injected via MCP_SERVER_TARGET_HOST)
-MCP_HOST = os.getenv("MCP_SERVER_TARGET_HOST", "127.0.0.1")
+MCP_HOST = os.getenv("MCP_SERVER_HOST", "127.0.0.1")
 MCP_PORT = os.getenv("MCP_SERVER_PORT", "8001")
 MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", f"http://{MCP_HOST}:{MCP_PORT}/mcp")
 
