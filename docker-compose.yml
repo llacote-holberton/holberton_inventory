@@ -94,6 +94,27 @@ services:
       #  - hbntory_net
       restart: unless-stopped
 
+  ai_service:
+    build:
+      context: ${PWD}/ai_service
+      dockerfile: Dockerfile.ai_service
+    container_name: hbntory-ai-service
+    ports:
+      - "${AI_SERVICE_PORT:-8003}:8003"
+    environment:
+      - AI_SERVICE_PORT=${AI_SERVICE_PORT:-8003}
+      # Name of docker service since we are within same network.
+      # Here it is not read from .env since it depends on this file's own structure.
+      - MCP_SERVER_HOST=product_mcp_server
+      # Reusing the variable to ensure we request to the right port.
+      - MCP_SERVER_PORT=${MCP_SERVER_PORT:-8001}
+      # Model agnostic configuration (name and if need be API key)
+      - LLM_MODEL_NAME=${LLM_MODEL_NAME}
+      - LLM_MODEL_API_KEY=${LLM_MODEL_API_KEY}
+    depends_on:
+      - mcp_server
+    restart: unless-stopped
+
 
 volumes:
   stock_db_data:

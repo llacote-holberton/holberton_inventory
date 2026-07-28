@@ -1,5 +1,6 @@
 import os
 import uuid
+from dotenv import load_dotenv
 
 from google.adk.agents import LlmAgent
 from google.adk.models.lite_llm import LiteLlm
@@ -9,14 +10,33 @@ from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
 from google.adk.tools.mcp_tool import StreamableHTTPConnectionParams
 from google.genai import types
 
-# http://product_mcp_server:8001/mcp name for if/when we expose as docker service
-MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://127.0.0.1:8001/mcp")
+load_dotenv()
 
-# Format attendu par LiteLLM pour NVIDIA NIM : "nvidia_nim/<org>/<modele>".
-# minimaxai/minimax-m3 : minimax-m2.7 a atteint sa fin de vie le
-# 27 juillet 2026 (retiré du catalogue NVIDIA) ; m3 est son successeur,
-# disponible en free endpoint, avec tool-calling supporté.
-MODEL = "nvidia_nim/minimaxai/minimax-m3"
+# ========== MCP SERVER CONFIGURATION ==========
+# Outside "Docker compose context" -> 127.0.0.1:8001
+# Within "Docker compose context"  -> mcp_server:8001 
+#   (injected via MCP_SERVER_TARGET_HOST)
+MCP_HOST = os.getenv("MCP_SERVER_TARGET_HOST", "127.0.0.1")
+MCP_PORT = os.getenv("MCP_SERVER_PORT", "8001")
+MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", f"http://{MCP_HOST}:{MCP_PORT}/mcp")
+
+
+# ========== LLM CONFIGURATION ==========
+# NOTE: for Nvidia NIM, a specific format is expected by LiteLLM to "guess" the related
+# name of environment variable holding api key: "nvidia_nim/<org>/<modele>".
+# Also note m2.7 is EOL on 2026/07/27, replaced by m3, successor with free endpoint,
+#   and supported automatic tool-calling.
+LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "nvidia_nim/minimaxai/minimax-m3")
+LLM_MODEL_API_KEY = os.getenv("LLM_MODEL_API_KEY")
+
+# Affecting the "generically named variable" value into something with the name
+#   "computed by LiteLLM depending on the model".
+#if "LLM_MODEL_API_KEY" in os.environ and "NVIDIA_NIM_API_KEY" not in os.environ:
+#    os.environ["NVIDIA_NIM_API_KEY"] = os.getenv("LLM_MODEL_API_KEY")
+if LLM_MODEL_API_KEY:
+    os.environ.setdefault("NVIDIA_NIM_API_KEY", LLM_MODEL_API_KEY)
+
+
 APP_NAME = "ai_query_service"
 
 SYSTEM_PROMPT = """
@@ -78,7 +98,7 @@ def _create_runner() -> Runner:
     )
     
     root_agent = LlmAgent(
-        model=LiteLlm(model=MODEL, temperature=0),
+        model=LiteLlm(model=LLM_MODEL_NAME, temperature=0),
         name="product_stock_agent",
         instruction=SYSTEM_PROMPT,
         tools=[mcp_toolset],
@@ -138,3 +158,8 @@ async def answer_question_stream(question: str):
             for part in event.content.parts:
                 if part.text:
                     yield part.text
+
+
+if __name__ == "__main__":
+    print(f"MCP URL: {MCP_SERVER_URL}")
+    print(f"Model: {LLM_MODEL_NAME}")
