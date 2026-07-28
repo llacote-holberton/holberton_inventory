@@ -112,6 +112,12 @@ services:
       # Model agnostic configuration (name and if need be API key)
       - LLM_MODEL_NAME=${LLM_MODEL_NAME}
       - LLM_MODEL_API_KEY=${LLM_MODEL_API_KEY}
+      # Used to tell Python to not output Warning level (only) messages
+      # Useful because Google ADK will otherwise output several warnings during use
+      # One at start because cannot connect to Google Cloud since we didn't configure
+      #   "Google Application Default Credentials" so warns it fallbacks on "local".
+      # Others during run because it has features still in "experimental stage".
+      - PYTHONWARNINGS=ignore
     depends_on:
       - mcp_server
     restart: unless-stopped
