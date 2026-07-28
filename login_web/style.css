@@ -1,0 +1,40 @@
+/* Formulaire de Login */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.login-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.login-form label {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--teal);
+}
+
+.login-form input {
+  padding: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.login-form input:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 1px;
+}
+
+.error-msg {
+  color: var(--brick);
+  font-size: 0.85rem;
+  margin: 0;
+  font-family: var(--font-mono);
+}

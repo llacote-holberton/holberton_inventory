@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HBntory — Connexion Backoffice</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wordmark">HBNTORY</div>
+    <nav class="topnav">
+      <a href="index.html">Accueil IA</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <h1>Connexion Backoffice</h1>
+
+    <section class="ticket">
+      <p class="ticket-label">Espace Restreint (Manager / Admin)</p>
+      
+      <form id="login-form" class="login-form">
+        <div class="form-group">
+          <label for="username">Identifiant</label>
+          <input type="text" id="username" placeholder="ex: j.martin" required autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label for="password">Mot de passe</label>
+          <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+
+        <p id="error-message" class="error-msg" hidden></p>
+
+        <button type="submit" id="submit-btn" class="add">Se connecter</button>
+      </form>
+    </section>
+  </main>
+
+  <footer class="footbar">
+    <span>© 2026 HBntory</span>
+    <a href="#">Legal</a>
+  </footer>
+
+  <script src="login.js"></script>
+</body>
+</html>
