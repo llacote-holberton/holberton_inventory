@@ -17,21 +17,6 @@
  * utilisateurs et leur affectation à une branche.
  */
 
-const BRANCH_API_URL = "http://localhost:8000/api/branches";
-const USER_API_URL = "http://localhost:8000/api/users";
-
-
-const MOCK_BRANCHES = [
-  { id: 1, name: "Lyon Part-Dieu" },
-  { id: 2, name: "Paris Bastille" },
-];
-
-const MOCK_USERS = [
-  { id: 1, username: "j.martin", branch_id: 1, active: true },
-  { id: 2, username: "s.durand", branch_id: 2, active: true },
-  { id: 3, username: "k.benali", branch_id: 1, active: false },
-];
-
 let branches = [];
 let users = [];
 let nextBranchId = 1;

@@ -1,6 +1,10 @@
 // ============================= COMMON JS ==================================
 // Role: fonctions partagées sur l'ensemble des pages du Backoffice.
 
+// ============== 0. CONFIGURATION des appels à l'API Backoffice ============
+const BACKOFFICE_API_ROOT = window.location.origin;
+
+
 // ============== 1. Vérification immédiate de l'authentification ============
 function checkAuth() {
     if (window.location.pathname.includes("/login")) return;
@@ -85,16 +89,17 @@ function logout() {
 async function apiFetch(url, options = {}) {
     const token = localStorage.getItem("token");
     
-    // Fusion des headers existants avec le Bearer token
+    // Si l'URL passée est relative (ex: "/branches"), on lui préfixe la racine
+    const fullUrl = url.startsWith("http") ? url : `${BACKOFFICE_API_ROOT}${url}`;
+
     options.headers = {
         ...options.headers,
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json"
     };
 
-    const response = await fetch(url, options);
+    const response = await fetch(fullUrl, options);
 
-    // Si le token est expiré ou invalide (401), nettoyer et renvoyer au login
     if (response.status === 401) {
         localStorage.clear();
         window.location.href = "/ui/login";
