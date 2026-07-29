@@ -11,6 +11,13 @@ from crud import (
 
 # ========== BRANCH CRUD TESTS ==========
 
+def test_list_branches_empty_db_returns_empty_list(db):
+    """Verifies branch retrieval functions return empty lists when DB is empty."""
+    assert list_branches(db) == []
+    assert list_branches_ordered_by_label(db) == []
+    assert get_branches_with_active_managers(db) == []
+
+
 def test_list_branches(db):
     """Verifies that list_branches retrieves all branches in database."""
     b1 = Branch(label="Toulouse")
