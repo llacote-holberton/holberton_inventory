@@ -121,10 +121,17 @@ def list_branches_route(
     current_user: dict = Depends(require_admin_or_manager)
 ):
     """Uses 'combined role check' to reuse route for both roles"""
-    if current_user.get("role") == 'admin' and with_managers == True:
+    # if current_user.get("role") == 'admin' and with_managers == True:
+    #     return crud.get_branches_with_active_managers(db)
+    # elif ordered_by_label:
+    #     return crud.list_branches_ordered_by_label(db)
+    # It is better to explicitely reject a users which tried to use
+    #   an option exclusive to admins.
+    if with_managers:
+        if current_user.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="forbidden")
         return crud.get_branches_with_active_managers(db)
-    elif ordered_by_label:
+    if ordered_by_label:
         return crud.list_branches_ordered_by_label(db)
-    else:
-        return crud.list_branches(db)
+    return crud.list_branches(db)
 
