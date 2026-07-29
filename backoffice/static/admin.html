@@ -5,12 +5,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HBntory — Administration</title>
+    <!-- 1. common.js for security and logout (and later dynamic common parts injection) -->
+    <script src="/static/common.js"></script>
 <link rel="stylesheet" href="/static/admin.css">
 </head>
 <body>
   <header class="topbar">
     <div class="wordmark">HBNTORY</div>
     <nav class="topnav">
+      <button id="logout-btn" class="btn-danger nav-accent" onclick="logout()">Se déconnecter</button>
     </nav>
   </header>
 
@@ -20,10 +23,12 @@
     <section class="ticket">
       <p class="ticket-label">Branches</p>
       <div id="branch-list" class="branch-list"></div>
+      <!-- HIDDEN FOR DEMO
       <form id="branch-form" class="inline-form">
         <input type="text" id="branch-name" placeholder="Nom de la nouvelle branche" required>
         <button type="submit" class="add">Créer la branche</button>
       </form>
+      -->
     </section>
 
     <section class="ticket">
@@ -43,6 +48,7 @@
     <a href="#">Legal</a>
   </footer>
 
+  <!-- Scripts specific to admin management -->
   <script src="/static/admin.js"></script>
 </body>
 </html>

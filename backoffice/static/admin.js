@@ -20,6 +20,7 @@
 const BRANCH_API_URL = "http://localhost:8000/api/branches";
 const USER_API_URL = "http://localhost:8000/api/users";
 
+
 const MOCK_BRANCHES = [
   { id: 1, name: "Lyon Part-Dieu" },
   { id: 2, name: "Paris Bastille" },
