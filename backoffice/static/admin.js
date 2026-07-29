@@ -176,11 +176,24 @@ async function changeUserBranch(userId, newBranchId, oldBranchId) {
   }
 }
 
-function changeUserPassword(userId) {
-  const newPassword = prompt("Nouveau mot de passe pour cet utilisateur :");
-  if (!newPassword) return;
-  // TODO : PATCH vers USER_API_URL/{userId}/password avec { password: newPassword }
-  alert("Mot de passe mis à jour (simulation — aucune donnée envoyée pour l'instant).");
+// Changer le mot de passe
+async function changeUserPassword(userId) {
+  const newPassword = prompt("Saisissez le nouveau mot de passe :");
+  if (!newPassword || newPassword.trim().length < 4) {
+    alert("Le mot de passe doit contenir au moins 4 caractères.");
+    return;
+  }
+
+  const res = await apiFetch(`/users/${userId}/reset_password`, {
+    method: "POST",
+    body: JSON.stringify({ new_password: newPassword.trim() })
+  });
+
+  if (res && res.ok) {
+    alert("Mot de passe mis à jour avec succès !");
+  } else {
+    alert("Échec de la modification du mot de passe.");
+  }
 }
 
 function toggleUserActive(userId) {
