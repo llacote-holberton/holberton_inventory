@@ -3,11 +3,14 @@ load_dotenv()
 
 from auth import verify_password, create_access_token
 from auth import get_jwt_payload, require_manager, require_admin
+from auth import require_admin_or_manager
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 import crud
 from api_models import LoginRequest
+from api_models import BranchOut
+
 
 app = FastAPI(title="Hbntory Backoffice")
 
@@ -99,3 +102,29 @@ def reassign_branch_route(
     if not success:
         raise HTTPException(status_code=404, detail="user_not_found_or_not_manager")
     return {"user_id": user_id, "branch_id": payload.branch_id}
+
+
+# =============== BRANCHES RELATED ROUTES ===============
+@app.get("/branches", response_model=list[BranchOut])
+def list_branches_route(
+    # Parameter not matching 'pattern' in url (like /branches/{my_param})
+    # -> FastAPI understands automatically that it must map it from
+    # URL query parameters if provided (ex /branches?with_managers=true)
+    ordered_by_label: bool = True,
+    with_managers: bool = False,
+    # Note: conversion is done through Pydantic which is somewhat flexible
+    #   (ex "0" --> False, "true/false" will be understood whichever case
+    #   (True, true, TRUE). Boolean also works on yes/no, t/f, on/off.
+    # Failure in converting value as boolean will raise ValidationError,
+    #   catched by Pydantic to trigger a 422 Response.
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_admin_or_manager)
+):
+    """Uses 'combined role check' to reuse route for both roles"""
+    if current_user.get("role") == 'admin' and with_managers == True:
+        return crud.get_branches_with_active_managers(db)
+    elif ordered_by_label:
+        return crud.list_branches_ordered_by_label(db)
+    else:
+        return crud.list_branches(db)
+

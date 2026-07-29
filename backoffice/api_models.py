@@ -22,14 +22,6 @@ class ProductStockSummary(BaseModel):
     details: list[StockOut]
 
 
-class BranchOut(BaseModel):
-    """Representation of stock to serialize in Response's bodies as JSON"""
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    label: str
-
-
 class UserOut(BaseModel):
     """UserOut as in user outputed for API consumption"""
 
@@ -43,6 +35,17 @@ class UserOut(BaseModel):
     branch_id: int | None
     is_active: bool
     # Password_hash is left out on purpose for security reasons.
+
+
+class BranchOut(BaseModel):
+    """Representation of stock to serialize in Response's bodies as JSON"""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    label: str
+    # Optional, either absent or empty if not loaded. Reflects the
+    #   "dynamic relationship" declared in db_models.Branch
+    managers: list[UserOut] | None = None
 
 
 # ===== API models used for "POST" requests =====

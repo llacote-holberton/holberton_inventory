@@ -63,3 +63,9 @@ def require_admin(current_user: dict = Depends(get_jwt_payload)) -> dict:
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="forbidden")
     return current_user
+
+
+def require_admin_or_manager(current_user: dict = Depends(get_jwt_payload)) -> dict:
+    if current_user.get("role") not in ("admin", "manager"):
+        raise HTTPException(status_code=403, detail="forbidden")
+    return current_user
