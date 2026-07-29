@@ -1,28 +1,9 @@
-# ========== IMPORTS AND "INITIAL SETUP" ==========
-# REQUIRED to reconstruct dynamically the path to parent folder in which
-#   the models are located.
-import sys
-from pathlib import Path
+#!/usr/bin/env python3
+"""Unit tests for user CRUD database operations."""
 
-# Adds the parent of current folder to the list of paths
-#   to parse when looking for modules (a bit like bash PATH)
-root_dir = Path(__file__).resolve().parent.parent
-sys.path.append(str(root_dir))
-
-# REQUIRED to exploit "local environment variables"
-from os import getenv
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# ========== DEPENDENCIES & SETUP ==========
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 from sqlalchemy.exc import IntegrityError
-
-from db_models import Base, User, UserRole, Branch
+from db_models import UserRole, Branch
 from crud import (
     create_user,
     get_user_by_name,
@@ -32,33 +13,8 @@ from crud import (
     set_user_active_state,
 )
 
-# SQLite in-memory setup for isolated fast tests
-engine = create_engine(
-    "sqlite:///:memory:",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestSessionLocal = sessionmaker(bind=engine)
-
 
 # ========== FIXTURES ==========
-@pytest.fixture(autouse=True)
-def setup_database():
-    """Recreates all database tables before each test and drops them after."""
-    Base.metadata.create_all(bind=engine)
-    yield
-    Base.metadata.drop_all(bind=engine)
-
-
-@pytest.fixture
-def db():
-    """Provides a fresh database session for a single test."""
-    session = TestSessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()
-
 
 @pytest.fixture
 def sample_branch(db):
@@ -138,14 +94,12 @@ def test_reset_user_password(db):
     """Verifies password reset on existing vs non-existing user."""
     user = create_user(db, user_name="david", pwd_hash="old_hash")
 
-    # Success case
     success = reset_user_password(db, user_id=user.id, password_hash="new_hash")
     db.refresh(user)
 
     assert success is True
     assert user.password_hash == "new_hash"
 
-    # Non-existing user ID
     failed = reset_user_password(db, user_id=9999, password_hash="any_hash")
     assert failed is False
 
@@ -155,13 +109,11 @@ def test_assign_branch_manager_only(db, sample_branch):
     manager = create_user(db, user_name="mgr", pwd_hash="hash", role=UserRole.MANAGER)
     admin = create_user(db, user_name="adm", pwd_hash="hash", role=UserRole.ADMIN)
 
-    # Must succeed for Manager
     success_mgr = assign_branch(db, user_id=manager.id, branch_id=sample_branch.id)
     db.refresh(manager)
     assert success_mgr is True
     assert manager.branch_id == sample_branch.id
 
-    # Must fail (return False) for Admin
     success_adm = assign_branch(db, user_id=admin.id, branch_id=sample_branch.id)
     db.refresh(admin)
     assert success_adm is False
@@ -173,16 +125,13 @@ def test_set_user_active_state(db):
     user = create_user(db, user_name="eva", pwd_hash="hash")
     assert user.is_active is True
 
-    # Deactivate
     set_user_active_state(db, user_id=user.id, is_active=False)
     db.refresh(user)
     assert user.is_active is False
 
-    # Reactivate
     set_user_active_state(db, user_id=user.id, is_active=True)
     db.refresh(user)
     assert user.is_active is True
 
-    # Unknown user
     result = set_user_active_state(db, user_id=9999, is_active=False)
     assert result is False

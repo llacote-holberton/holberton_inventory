@@ -1,61 +1,13 @@
-# ========== IMPORTS AND "INITIAL SETUP" ==========
-# REQUIRED to reconstruct dynamically the path to parent folder in which
-#   the models are located.
-import sys
-from pathlib import Path
+#!/usr/bin/env python3
+"""Unit tests for branch CRUD database operations."""
 
-# Adds the parent of current folder to the list of paths
-#   to parse when looking for modules (a bit like bash PATH)
-root_dir = Path(__file__).resolve().parent.parent
-sys.path.append(str(root_dir))
-
-# REQUIRED to exploit "local environment variables"
-from os import getenv
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# ========== DEPENDENCIES & SETUP ==========
-import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
-from db_models import Base, Branch, User, UserRole
+from db_models import Branch, User, UserRole
 from crud import (
     list_branches,
     list_branches_ordered_by_label,
     get_branches_with_active_managers,
     find_branches_by_name,
 )
-
-# SQLite in-memory setup for isolated fast tests
-engine = create_engine(
-    "sqlite:///:memory:",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestSessionLocal = sessionmaker(bind=engine)
-
-
-# ========== FIXTURES ==========
-@pytest.fixture(autouse=True)
-def setup_database():
-    """Recreates all database tables before each test and drops them after."""
-    Base.metadata.create_all(bind=engine)
-    yield
-    Base.metadata.drop_all(bind=engine)
-
-
-@pytest.fixture
-def db():
-    """Provides a fresh database session for a single test."""
-    session = TestSessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()
-
 
 # ========== BRANCH CRUD TESTS ==========
 
@@ -96,7 +48,7 @@ def test_find_branches_by_name(db):
     ])
     db.commit()
 
-    # Search with lowercase substring "bour"
+    # Search with lowercase substring "bo"
     results = find_branches_by_name(db, search_string="bo")
     assert len(results) == 2
     assert [b.label for b in results] == ["Bordeaux", "Bourges"]
@@ -135,15 +87,12 @@ def test_get_branches_with_active_managers(db):
 
     branches = get_branches_with_active_managers(db)
 
-    # Branches ordered by label (Bordeaux, then Lyon)
     assert len(branches) == 2
     assert branches[0].label == "Bordeaux"
     assert branches[1].label == "Lyon"
 
-    # Bordeaux should only have Alice in its managers list
     bordeaux_managers = branches[0].managers
     assert len(bordeaux_managers) == 1
     assert bordeaux_managers[0].name == "Alice"
 
-    # Lyon has no managers
     assert len(branches[1].managers) == 0
