@@ -36,6 +36,13 @@ LLM_MODEL_API_KEY = os.getenv("LLM_MODEL_API_KEY")
 if LLM_MODEL_API_KEY:
     os.environ.setdefault("NVIDIA_NIM_API_KEY", LLM_MODEL_API_KEY)
 
+# ==== TEMPORARY =================
+import logging
+import litellm
+# Active les logs détaillés de LiteLLM et d'ADK
+logging.basicConfig(level=logging.INFO)
+litellm.verbose_logger.setLevel(logging.DEBUG)
+# ==== TEMPORARY END =============
 
 APP_NAME = "ai_query_service"
 
