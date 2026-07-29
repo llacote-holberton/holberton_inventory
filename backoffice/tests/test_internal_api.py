@@ -1,78 +1,20 @@
-"""Test module dedicated to asserting endpoints of Internal API used by AI"""
-# Note: thanks Claude for creating a nearly complete stub to adjust. :)
+#!/usr/bin/env python3
+"""Test module dedicated to asserting endpoints of Internal API used by AI services."""
 
-# ========== IMPORTS AND "INITIAL SETUP" ==========
-# REQUIRED to reconstruct dynamically the path to parent folder in which
-#   the models are located.
-import sys
-from pathlib import Path
-# Adds the parent of current folder to the list of paths
-#   to parse when looking for modules (a bit like bash PATH)
-root_dir = Path(__file__).resolve().parent.parent
-sys.path.append(str(root_dir))
-
-# REQUIRED to exploit "local environment variables"
-from os import getenv
-from dotenv import load_dotenv
-load_dotenv()
-
-# TESTS related imports.
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.pool import StaticPool
-from sqlalchemy.orm import sessionmaker
+from db_models import Branch, Stock
+from internal_api import app as internal_app
 
-from db_models import Base, Branch, Stock
-from database import get_db
-from api_models import StockOut, BranchOut
-
-from internal_api import app, INTERNAL_API_KEY, verify_internal_key
-
-
-# INTERNAL_API_KEY override to not depend on presence of .env
-#   with proper variable.
+# "INTERNAL_API_KEY" override configuration for tests
 TEST_API_KEY = "cle-de-test-super-securisee"
 VALID_HEADERS = {"x-api-key": TEST_API_KEY}
+internal_client = TestClient(internal_app)
+
 
 @pytest.fixture(autouse=True)
 def override_api_key(monkeypatch):
-    # On force l'API à utiliser cette même clé pendant les tests
     monkeypatch.setattr("internal_api.INTERNAL_API_KEY", TEST_API_KEY)
-
-
-# ---- Setting up test DB, one connexion, one shared database for all tests ----
-engine = create_engine(
-    "sqlite:///:memory:",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestSessionLocal = sessionmaker(bind=engine)
-
-
-def override_get_db():
-    db = TestSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
-client = TestClient(app)
-
-@pytest.fixture(autouse=True)
-def setup_database():
-    Base.metadata.create_all(engine)
-    yield
-    Base.metadata.drop_all(engine)
-
-
-@pytest.fixture
-def db_session():
-    db = TestSessionLocal()
-    yield db
-    db.close()
 
 
 @pytest.fixture
@@ -86,7 +28,7 @@ def two_branches(db_session):
 
 @pytest.fixture
 def stock_data(db_session, two_branches):
-    """Produit 6 présent dans les deux branches, quantités différentes."""
+    """Product ID 6 present in two branches with different stock quantities."""
     db_session.add_all([
         Stock(branch_id=1, product_id=6, quantity=15),
         Stock(branch_id=4, product_id=6, quantity=55),
@@ -98,25 +40,24 @@ def stock_data(db_session, two_branches):
 # ---- GET /internal/branches/{branch_id}/stock/{product_id} ----
 
 def test_get_stock_existing_line_returns_quantity(stock_data):
-    response = client.get("/internal/branches/4/stock/6", headers=VALID_HEADERS)
+    response = internal_client.get("/internal/branches/4/stock/6", headers=VALID_HEADERS)
     assert response.status_code == 200
     assert response.json() == {"branch_id": 4, "product_id": 6, "quantity": 55}
 
 
 def test_get_stock_missing_line_returns_zero_not_404(two_branches):
-    response = client.get("/internal/branches/1/stock/999", headers=VALID_HEADERS)
+    response = internal_client.get("/internal/branches/1/stock/999", headers=VALID_HEADERS)
     assert response.status_code == 200
     assert response.json()["quantity"] == 0
 
 
 def test_get_stock_without_api_key_returns_error(stock_data):
-    response = client.get("/internal/branches/4/stock/6")
-    # Must accept 422 as valid response, means "Unprocessable request"
+    response = internal_client.get("/internal/branches/4/stock/6")
     assert response.status_code in (401, 403, 422)
 
 
 def test_get_stock_with_wrong_api_key_returns_error(stock_data):
-    response = client.get(
+    response = internal_client.get(
         "/internal/branches/4/stock/6",
         headers={"x-api-key": "wrong-key"},
     )
@@ -124,8 +65,9 @@ def test_get_stock_with_wrong_api_key_returns_error(stock_data):
 
 
 # ---- GET /internal/products/{product_id}/stocks ----
+
 def test_stock_by_product_across_branches(stock_data):
-    response = client.get("/internal/products/6/stocks", headers=VALID_HEADERS)
+    response = internal_client.get("/internal/products/6/stocks", headers=VALID_HEADERS)
     assert response.status_code == 200
     result = response.json()
     assert result["product_id"] == 6
@@ -136,7 +78,7 @@ def test_stock_by_product_across_branches(stock_data):
 
 
 def test_stock_by_product_with_no_stock_returns_empty_summary(two_branches):
-    response = client.get("/internal/products/999/stocks", headers=VALID_HEADERS)
+    response = internal_client.get("/internal/products/999/stocks", headers=VALID_HEADERS)
     assert response.status_code == 200
     result = response.json()
     assert result["product_id"] == 999
@@ -144,10 +86,10 @@ def test_stock_by_product_with_no_stock_returns_empty_summary(two_branches):
     assert result["details"] == []
 
 
-
 # ---- GET /internal/branches/{branch_id}/stock ----
+
 def test_stock_by_branch_lists_all_products(stock_data):
-    response = client.get("/internal/branches/4/stocks", headers=VALID_HEADERS)
+    response = internal_client.get("/internal/branches/4/stocks", headers=VALID_HEADERS)
     assert response.status_code == 200
     results = response.json()
     assert len(results) == 2
@@ -156,14 +98,15 @@ def test_stock_by_branch_lists_all_products(stock_data):
 
 
 def test_stock_by_branch_with_no_stock_returns_empty_list(two_branches):
-    response = client.get("/internal/branches/1/stocks", headers=VALID_HEADERS)
+    response = internal_client.get("/internal/branches/1/stocks", headers=VALID_HEADERS)
     assert response.status_code == 200
     assert response.json() == []
+
 
 # ---- GET /internal/branches/list ----
 
 def test_list_branches_returns_all(two_branches):
-    response = client.get("/internal/branches/list", headers=VALID_HEADERS)
+    response = internal_client.get("/internal/branches/list", headers=VALID_HEADERS)
     assert response.status_code == 200
     results = response.json()
     assert len(results) == 2
@@ -172,12 +115,10 @@ def test_list_branches_returns_all(two_branches):
 
 
 def test_list_branches_without_api_key_returns_error():
-    # Header totalement absent -> rejeté par la validation FastAPI elle-même, avant ta fonction
-    response = client.get("/internal/branches/list")
+    response = internal_client.get("/internal/branches/list")
     assert response.status_code == 422
 
 
 def test_list_branches_with_wrong_api_key_returns_error():
-    # Header présent mais incorrect -> ta fonction s'exécute et lève 403 volontairement
-    response = client.get("/internal/branches/list", headers={"x-api-key": "wrong-key"})
+    response = internal_client.get("/internal/branches/list", headers={"x-api-key": "wrong-key"})
     assert response.status_code == 403

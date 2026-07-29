@@ -1,27 +1,8 @@
-# ========== IMPORTS AND "INITIAL SETUP" ==========
-# REQUIRED to reconstruct dynamically the path to parent folder in which
-#   the models are located.
-import sys
-from pathlib import Path
+#!/usr/bin/env python3
+"""Unit tests for stock CRUD database operations."""
 
-# Adds the parent of current folder to the list of paths
-#   to parse when looking for modules (a bit like bash PATH)
-root_dir = Path(__file__).resolve().parent.parent
-sys.path.append(str(root_dir))
-
-# REQUIRED to exploit "local environment variables"
-from os import getenv
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# ========== DEPENDENCIES & SETUP ==========
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
-from db_models import Base, Stock, Branch
+from db_models import Branch
 from crud import (
     get_stock,
     set_stock,
@@ -32,33 +13,8 @@ from crud import (
     InsufficientStockError,
 )
 
-# SQLite in-memory setup for isolated fast tests
-engine = create_engine(
-    "sqlite:///:memory:",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestSessionLocal = sessionmaker(bind=engine)
-
 
 # ========== FIXTURES ==========
-@pytest.fixture(autouse=True)
-def setup_database():
-    """Recreates all database tables before each test and drops them after."""
-    Base.metadata.create_all(bind=engine)
-    yield
-    Base.metadata.drop_all(bind=engine)
-
-
-@pytest.fixture
-def db():
-    """Provides a fresh database session for a single test."""
-    session = TestSessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()
-
 
 @pytest.fixture
 def sample_branches(db):
@@ -85,7 +41,6 @@ def test_set_stock_insert_and_update(db, sample_branches):
     """Verifies set_stock creates a row if missing and updates it if present."""
     branch, _ = sample_branches
 
-    # 1. First insert (initial quantity)
     qty1 = set_stock(db, product_id=101, branch_id=branch.id, quantity=50)
     assert qty1 == 50
 
@@ -93,7 +48,6 @@ def test_set_stock_insert_and_update(db, sample_branches):
     assert stock is not None
     assert stock.quantity == 50
 
-    # 2. Update existing stock row
     qty2 = set_stock(db, product_id=101, branch_id=branch.id, quantity=120)
     assert qty2 == 120
 
@@ -106,7 +60,6 @@ def test_remove_stock_success(db, sample_branches):
     branch, _ = sample_branches
     set_stock(db, product_id=101, branch_id=branch.id, quantity=100)
 
-    # Remove 30 units
     remaining = remove_stock(db, branch_id=branch.id, product_id=101, amount=30)
 
     assert remaining == 70
@@ -119,14 +72,11 @@ def test_remove_stock_insufficient_stock_raises_error(db, sample_branches):
     branch, _ = sample_branches
     set_stock(db, product_id=101, branch_id=branch.id, quantity=20)
 
-    # Attempt to remove 50 units
     with pytest.raises(InsufficientStockError) as exc_info:
         remove_stock(db, branch_id=branch.id, product_id=101, amount=50)
 
-    # Check exception attribute
     assert exc_info.value.available == 20
 
-    # Verify database state was NOT altered
     stock = get_stock(db, product_id=101, branch_id=branch.id)
     assert stock.quantity == 20
 
@@ -142,10 +92,8 @@ def test_list_stocks_for_product(db, sample_branches):
     """Verifies listing stock levels for a specific product across multiple branches."""
     branch1, branch2 = sample_branches
 
-    # Product 101 present in both branches
     set_stock(db, product_id=101, branch_id=branch1.id, quantity=15)
     set_stock(db, product_id=101, branch_id=branch2.id, quantity=40)
-    # Product 202 present only in branch 1
     set_stock(db, product_id=202, branch_id=branch1.id, quantity=5)
 
     stocks_101 = list_stocks_for_product(db, product_id=101)
