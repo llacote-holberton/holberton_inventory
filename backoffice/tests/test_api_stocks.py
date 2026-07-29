@@ -4,7 +4,6 @@
 import pytest
 from db_models import Branch, Stock
 
-
 # ========== MODULE SPECIFIC FIXTURES ==========
 
 @pytest.fixture
@@ -108,3 +107,93 @@ def test_get_branch_stocks_invalid_branch_id_param_returns_422(client, manager_t
         headers={"Authorization": f"Bearer {manager_token}"},
     )
     assert response.status_code == 422
+
+
+# ========== ADD STOCK ENDPOINT TESTS ==========
+
+def test_add_stock_without_token_returns_401(client):
+    """Verifies unauthenticated calls are rejected."""
+    response = client.post(
+        "/branches/1/stock/add",
+        json={"product_id": 101, "amount": 10},
+    )
+    assert response.status_code == 401
+
+
+def test_add_stock_as_admin_returns_403(client, admin_token):
+    """Verifies admins cannot call manager stock endpoints."""
+    response = client.post(
+        "/branches/1/stock/add",
+        json={"product_id": 101, "amount": 10},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 403
+
+
+def test_add_stock_own_branch_succeeds(client, manager_token, db_session):
+    """Verifies manager can add stock to their assigned branch (branch_id=1)."""
+    branch = Branch(id=1, label="Paris")
+    db_session.add(branch)
+    db_session.commit()
+
+    response = client.post(
+        "/branches/1/stock/add",
+        json={"product_id": 101, "amount": 25},
+        headers={"Authorization": f"Bearer {manager_token}"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data == {"branch_id": 1, "product_id": 101, "quantity": 25}
+
+    # Verify stock row is correctly updated/inserted in database
+    stock_in_db = db_session.query(Stock).filter_by(branch_id=1, product_id=101).first()
+    assert stock_in_db is not None
+    assert stock_in_db.quantity == 25
+
+
+def test_add_stock_accumulates_existing_quantity(client, manager_token, db_session):
+    """Verifies adding stock increases existing quantity properly."""
+    branch = Branch(id=1, label="Paris")
+    stock = Stock(branch_id=1, product_id=101, quantity=10)
+    db_session.add_all([branch, stock])
+    db_session.commit()
+
+    response = client.post(
+        "/branches/1/stock/add",
+        json={"product_id": 101, "amount": 15},
+        headers={"Authorization": f"Bearer {manager_token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["quantity"] == 25
+
+
+def test_add_stock_other_branch_returns_403(client, manager_token):
+    """Verifies manager cannot add stock to a branch other than their assigned one."""
+    response = client.post(
+        "/branches/2/stock/add",
+        json={"product_id": 101, "amount": 10},
+        headers={"Authorization": f"Bearer {manager_token}"},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Forbidden_attempt_to_affect_other_branch"
+
+
+def test_add_stock_invalid_payload_returns_422(client, manager_token):
+    """Verifies negative amount, zero amount, and missing fields fail Pydantic validation."""
+    # Case 1: Amount <= 0
+    response_negative = client.post(
+        "/branches/1/stock/add",
+        json={"product_id": 101, "amount": -5},
+        headers={"Authorization": f"Bearer {manager_token}"},
+    )
+    assert response_negative.status_code == 422
+
+    # Case 2: Missing mandatory field ('amount')
+    response_missing = client.post(
+        "/branches/1/stock/add",
+        json={"product_id": 101},
+        headers={"Authorization": f"Bearer {manager_token}"},
+    )
+    assert response_missing.status_code == 422

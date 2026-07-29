@@ -7,6 +7,8 @@ from db_models import Stock
 from db_models import User, UserRole
 from db_models import Branch
 from sqlalchemy.orm import selectinload
+# Category used to warn about a "SQL Constraint Violation" raised in DB.
+from sqlalchemy.exc import IntegrityError
 
 # ========================= STOCK RELATED CRUD =========================
 def get_stock(db: Session, *, product_id: int, branch_id: int) -> Stock | None:
@@ -22,14 +24,30 @@ def add_stock(db: Session, *, product_id: int, branch_id: int, amount: int) -> i
     stmt = mysql_insert(Stock).values(
         branch_id=branch_id, product_id=product_id, quantity=amount
     )
-    stmt = stmt.on_duplicate_key_update(quantity=Stock.quantity + amount)
-    try:
-        db.execute(stmt)
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise
-    return (get_stock(db, product_id=product_id, branch_id=branch_id)).quantity
+    # Incompatible with test suite using SQLite for maximum isolation
+    #   because that function translates into MySQL-specific instructions.
+    # stmt = stmt.on_duplicate_key_update(quantity=Stock.quantity + amount)
+    # Tried a "direct insert" and intercepted error "row exists" to "convert"
+    #   to update
+    # try: db.execute(stmt); db.commit()
+    # except IntegrityError: db.rollback() raise
+    # Now we first try to retrieve a matching row, then process differently
+    #   depending on whether we got one or not, using the ORM abstraction layer.
+    # Which is the "most portable way" because UPSERT operation has no universal
+    #   standard in SQL language.
+    stock = db.query(Stock).filter_by(
+        branch_id=branch_id, product_id=product_id
+    ).first()
+    if stock:
+        stock.quantity += amount
+    else:
+        stock = Stock(branch_id=branch_id, product_id=product_id, quantity=amount)
+        db.add(stock)
+    db.commit()
+    # Reminder: forces SQLAlchemy to reread to get up to date values for attributes.
+    db.refresh(stock)
+
+    return stock.quantity
 
 
 class InsufficientStockError(Exception):

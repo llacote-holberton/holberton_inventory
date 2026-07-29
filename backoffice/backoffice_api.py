@@ -170,3 +170,39 @@ def get_branch_stocks_route(
 
     return crud.list_stocks_for_branch(db, branch_id=branch_id)
 
+
+# Import temporarily put here to stress relationship with route.
+# Will be hoisted back to top during "code cleaning phase".
+from api_models import StockAddIn
+@app.post("/branches/{branch_id}/stock/add", response_model=StockOut)
+def add_stock_route(
+    branch_id: int,
+    # Instead of plain json and manual validation in body...
+    # product_id: int,
+    # amount: int,
+    # It's simpler and more robust to delegate to a Pydantic model
+    payload: StockAddIn,
+    db: Session = Depends(get_db),
+    manager: dict = Depends(require_manager),
+):
+    m_id = manager.get("branch_id")
+    # NOTE: attempt to convert m_id to int not done immediately
+    #   to avoid an early 500 -> 422 Response if not convertable.
+    # No need to convert branch_id either, already done by Pydantic.
+    #   Only risk is value in JWT being incompatible (ex "hello")
+    #   but since it comes from our own app we consider the "risk"
+    #     is acceptable.
+    if m_id is None or int(m_id) != branch_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden_attempt_to_affect_other_branch"
+        )
+
+    new_quantity = crud.add_stock(
+        db,
+        product_id=payload.product_id,
+        branch_id=branch_id,
+        amount=payload.amount
+    )
+    return {"branch_id": branch_id, "product_id": payload.product_id, "quantity": new_quantity}
+
