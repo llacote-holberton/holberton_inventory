@@ -22,14 +22,6 @@ class ProductStockSummary(BaseModel):
     details: list[StockOut]
 
 
-class BranchOut(BaseModel):
-    """Representation of stock to serialize in Response's bodies as JSON"""
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    label: str
-
-
 class UserOut(BaseModel):
     """UserOut as in user outputed for API consumption"""
 
@@ -43,6 +35,17 @@ class UserOut(BaseModel):
     branch_id: int | None
     is_active: bool
     # Password_hash is left out on purpose for security reasons.
+
+
+class BranchOut(BaseModel):
+    """Representation of stock to serialize in Response's bodies as JSON"""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    label: str
+    # Optional, either absent or empty if not loaded. Reflects the
+    #   "dynamic relationship" declared in db_models.Branch
+    managers: list[UserOut] | None = None
 
 
 # ===== API models used for "POST" requests =====
@@ -63,3 +66,30 @@ class PasswordReset(BaseModel):
 
 class BranchAssignment(BaseModel):
     branch_id: int = Field(gt=0)
+
+
+class StockAddIn(BaseModel):
+    """Used to validate a JSON payload put in a 'add amount request'"""
+    product_id: int = Field(..., gt=0,
+                            description="Target product's ID: must be >0 number")
+    # Explaining syntax: each parameter of Field is a validation rule.
+    # First determines what should be, if any, the default value for that field.
+    # Because I put '...' which is the Python convention for "no argument"
+    #   it will cause a failure immediately if request does not provide the field.
+    # Second is a "strictly greater than 0" because it would make no sense
+    #   starting a SQL transaction if the result would be no change.
+    # Description is just equivalent of Python docstring to fill Swagger UI doc.
+    amount: int = Field(..., gt=0, description="Amount to add, must be >0")
+    # NOTE: the ... is mandatory for Pydantic v1, not in v2. 
+    #   Kept for max compatibility.
+
+
+# Same principle as above so uncommented this time. :)
+class StockRemoveIn(BaseModel):
+    """Used to validate a JSON payload put in a 'remove amount request'"""
+    product_id: int = Field(
+        ...,
+        gt=0,
+        description="Target product's ID: must be >0 number"
+    )
+    amount: int = Field(..., gt=0, description="Amount to add, must be >0")

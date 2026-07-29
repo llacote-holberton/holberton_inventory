@@ -7,6 +7,8 @@ from db_models import Stock
 from db_models import User, UserRole
 from db_models import Branch
 from sqlalchemy.orm import selectinload
+# Category used to warn about a "SQL Constraint Violation" raised in DB.
+from sqlalchemy.exc import IntegrityError
 
 # ========================= STOCK RELATED CRUD =========================
 def get_stock(db: Session, *, product_id: int, branch_id: int) -> Stock | None:
@@ -22,14 +24,30 @@ def add_stock(db: Session, *, product_id: int, branch_id: int, amount: int) -> i
     stmt = mysql_insert(Stock).values(
         branch_id=branch_id, product_id=product_id, quantity=amount
     )
-    stmt = stmt.on_duplicate_key_update(quantity=Stock.quantity + amount)
-    try:
-        db.execute(stmt)
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise
-    return (get_stock(db, product_id=product_id, branch_id=branch_id)).quantity
+    # Incompatible with test suite using SQLite for maximum isolation
+    #   because that function translates into MySQL-specific instructions.
+    # stmt = stmt.on_duplicate_key_update(quantity=Stock.quantity + amount)
+    # Tried a "direct insert" and intercepted error "row exists" to "convert"
+    #   to update
+    # try: db.execute(stmt); db.commit()
+    # except IntegrityError: db.rollback() raise
+    # Now we first try to retrieve a matching row, then process differently
+    #   depending on whether we got one or not, using the ORM abstraction layer.
+    # Which is the "most portable way" because UPSERT operation has no universal
+    #   standard in SQL language.
+    stock = db.query(Stock).filter_by(
+        branch_id=branch_id, product_id=product_id
+    ).first()
+    if stock:
+        stock.quantity += amount
+    else:
+        stock = Stock(branch_id=branch_id, product_id=product_id, quantity=amount)
+        db.add(stock)
+    db.commit()
+    # Reminder: forces SQLAlchemy to reread to get up to date values for attributes.
+    db.refresh(stock)
+
+    return stock.quantity
 
 
 class InsufficientStockError(Exception):
@@ -42,18 +60,30 @@ def remove_stock(db: Session, branch_id: int,
                  product_id: int, amount: int) -> int | None:
     result = db.execute(
         update(Stock)
-        .where(Stock.branch_id == branch_id, Stock.product_id == product_id,
-               Stock.quantity >= amount)
+        .where(
+            Stock.branch_id == branch_id,
+            Stock.product_id == product_id,
+            Stock.quantity >= amount
+        )
         .values(quantity=Stock.quantity - amount)
     )
     db.commit()
-    stock = get_stock(db, product_id=product_id, branch_id=branch_id)
+
+    # I prefer having the "success case" apart.
     if result.rowcount > 0:
-        return get_stock(db, product_id=product_id,
-                         branch_id=branch_id).quantity
+        updated_stock = get_stock(
+            db,
+            product_id=product_id,
+            branch_id=branch_id
+        )
+        return updated_stock.quantity
+    # Row count 0 means failure, we try to get stock to determine
+    #   it fails because "no matching row" OR "insufficient stock"
+    stock = get_stock(db, product_id=product_id, branch_id=branch_id)
     if stock is None:
         return None
     raise InsufficientStockError(available=stock.quantity)
+
 
 # ==== "Global Stock read methods" (used by Internal API) ====
 def list_stocks_for_product(db: Session, *, product_id: int) -> list[Stock]:
