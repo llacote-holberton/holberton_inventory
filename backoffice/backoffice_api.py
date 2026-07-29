@@ -245,3 +245,35 @@ def remove_stock_route(
     return {"branch_id": branch_id, "product_id": p_id, "quantity": new_quantity}
 
 
+
+# =============== BACKOFFICE UI - Static pages ===============
+
+# New imports for static files serving.
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+# Retrieving "true local path contextually" to cover both
+#   "from host" and "in docker container" cases.
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+
+# Unique mount for everything
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+# Routes d'affichage des pages
+@app.get("/")
+@app.get("/login")
+@app.get("/ui/login")
+def serve_login():
+    return FileResponse(STATIC_DIR / "login.html")
+
+
+@app.get("/ui/admin")
+def serve_admin():
+    return FileResponse(STATIC_DIR / "admin.html")
+
+
+@app.get("/ui/manager")
+def serve_manager():
+    return FileResponse(STATIC_DIR / "manager.html")

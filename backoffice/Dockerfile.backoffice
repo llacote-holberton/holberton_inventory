@@ -15,6 +15,9 @@ COPY database.py db_models.py crud.py ./
 COPY api_models.py auth.py backoffice_api.py ./
 # Related tests files
 COPY tests/test_api_users.py ./tests/
+# Copy folder holding UI files
+COPY static ./static
+
 
 # Make logs from Python app appear instantly in docker compose logs
 ENV PYTHONUNBUFFERED=1
