@@ -6,6 +6,7 @@ from db_models import Branch
 from crud import (
     get_stock,
     set_stock,
+    add_stock,
     remove_stock,
     list_stocks_for_product,
     list_stocks_for_branch,
@@ -55,6 +56,23 @@ def test_set_stock_insert_and_update(db, sample_branches):
     assert stock_updated.quantity == 120
 
 
+def test_add_stock_creates_and_increments(db, sample_branches):
+    """Verifies add_stock creates a new record if missing and increments if present."""
+    branch, _ = sample_branches
+
+    # 1. Creation case
+    qty1 = add_stock(db, product_id=101, branch_id=branch.id, amount=10)
+    assert qty1 == 10
+
+    # 2. Increment case
+    qty2 = add_stock(db, product_id=101, branch_id=branch.id, amount=15)
+    assert qty2 == 25
+
+    # Verification directly in DB
+    stock = get_stock(db, product_id=101, branch_id=branch.id)
+    assert stock.quantity == 25
+
+
 def test_remove_stock_success(db, sample_branches):
     """Verifies successful stock reduction."""
     branch, _ = sample_branches
@@ -65,6 +83,18 @@ def test_remove_stock_success(db, sample_branches):
     assert remaining == 70
     stock = get_stock(db, product_id=101, branch_id=branch.id)
     assert stock.quantity == 70
+
+
+def test_remove_stock_exact_amount_leaves_zero(db, sample_branches):
+    """Verifies removing the exact available stock amount results in 0 quantity."""
+    branch, _ = sample_branches
+    set_stock(db, product_id=101, branch_id=branch.id, quantity=10)
+
+    remaining = remove_stock(db, branch_id=branch.id, product_id=101, amount=10)
+
+    assert remaining == 0
+    stock = get_stock(db, product_id=101, branch_id=branch.id)
+    assert stock.quantity == 0
 
 
 def test_remove_stock_insufficient_stock_raises_error(db, sample_branches):
