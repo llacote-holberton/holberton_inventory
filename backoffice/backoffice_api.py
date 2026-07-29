@@ -206,3 +206,42 @@ def add_stock_route(
     )
     return {"branch_id": branch_id, "product_id": payload.product_id, "quantity": new_quantity}
 
+
+from api_models import StockRemoveIn
+@app.post("/branches/{branch_id}/stock/remove", response_model=StockOut)
+def remove_stock_route(
+    branch_id: int,
+    payload: StockRemoveIn,
+    db: Session = Depends(get_db),
+    manager: dict = Depends(require_manager),
+):
+    m_id = manager.get("branch_id")
+    if m_id is None or int(m_id) != branch_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden_attempt_to_affect_other_branch"
+        )
+
+    p_id = payload.product_id
+    try:
+        new_quantity = crud.remove_stock(
+            db,
+            branch_id=branch_id,
+            product_id=p_id,
+            amount=payload.amount
+        )
+    # Row exists but not enough stock to substract without going below 0.
+    except crud.InsufficientStockError as exc:
+        insufficient_msg = (
+            f"Insufficient stock: tried to substract {payload.amount}."
+            f" But only {exc.available} available!"
+        )
+        raise HTTPException(status_code=400, detail=insufficient_msg)
+    # Row didn't exist.
+    if new_quantity is None:
+        nostock_msg = f"No stock found in branch {branch_id} for product {p_id}"
+        raise HTTPException(status_code=404, detail=nostock_msg)
+    # Everything went well.
+    return {"branch_id": branch_id, "product_id": p_id, "quantity": new_quantity}
+
+

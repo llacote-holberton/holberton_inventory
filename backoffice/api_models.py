@@ -82,3 +82,14 @@ class StockAddIn(BaseModel):
     amount: int = Field(..., gt=0, description="Amount to add, must be >0")
     # NOTE: the ... is mandatory for Pydantic v1, not in v2. 
     #   Kept for max compatibility.
+
+
+# Same principle as above so uncommented this time. :)
+class StockRemoveIn(BaseModel):
+    """Used to validate a JSON payload put in a 'remove amount request'"""
+    product_id: int = Field(
+        ...,
+        gt=0,
+        description="Target product's ID: must be >0 number"
+    )
+    amount: int = Field(..., gt=0, description="Amount to add, must be >0")

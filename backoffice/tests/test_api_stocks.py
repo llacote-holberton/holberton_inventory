@@ -197,3 +197,122 @@ def test_add_stock_invalid_payload_returns_422(client, manager_token):
         headers={"Authorization": f"Bearer {manager_token}"},
     )
     assert response_missing.status_code == 422
+
+
+# ========== REMOVE STOCK ENDPOINT TESTS ==========
+
+def test_remove_stock_without_token_returns_401(client):
+    """Verifies unauthenticated requests are rejected."""
+    response = client.post(
+        "/branches/1/stock/remove",
+        json={"product_id": 101, "amount": 5},
+    )
+    assert response.status_code == 401
+
+
+def test_remove_stock_as_admin_returns_403(client, admin_token):
+    """Verifies admins cannot call manager stock endpoints."""
+    response = client.post(
+        "/branches/1/stock/remove",
+        json={"product_id": 101, "amount": 5},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 403
+
+
+def test_remove_stock_other_branch_returns_403(client, manager_token):
+    """Verifies manager cannot remove stock from a branch other than their assigned one."""
+    response = client.post(
+        "/branches/2/stock/remove",
+        json={"product_id": 101, "amount": 5},
+        headers={"Authorization": f"Bearer {manager_token}"},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Forbidden_attempt_to_affect_other_branch"
+
+
+def test_remove_stock_success(client, manager_token, db_session):
+    """Verifies successful stock removal updates database and returns remaining quantity."""
+    branch = Branch(id=1, label="Paris")
+    stock = Stock(branch_id=1, product_id=101, quantity=20)
+    db_session.add_all([branch, stock])
+    db_session.commit()
+
+    response = client.post(
+        "/branches/1/stock/remove",
+        json={"product_id": 101, "amount": 5},
+        headers={"Authorization": f"Bearer {manager_token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"branch_id": 1, "product_id": 101, "quantity": 15}
+
+    # Verify database record updated
+    stock_in_db = db_session.query(Stock).filter_by(branch_id=1, product_id=101).first()
+    assert stock_in_db.quantity == 15
+
+
+def test_remove_stock_nonexistent_returns_404(client, manager_token, db_session):
+    """Verifies 404 error when attempting to remove stock for a non-existent row."""
+    branch = Branch(id=1, label="Paris")
+    db_session.add(branch)
+    db_session.commit()
+
+    response = client.post(
+        "/branches/1/stock/remove",
+        json={"product_id": 999, "amount": 5},
+        headers={"Authorization": f"Bearer {manager_token}"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "No stock found in branch 1 for product 999"
+
+
+def test_remove_stock_insufficient_returns_400(client, manager_token, db_session):
+    """Verifies 400 Bad Request with custom detail when requested amount > stock available."""
+    branch = Branch(id=1, label="Paris")
+    stock = Stock(branch_id=1, product_id=101, quantity=3)
+    db_session.add_all([branch, stock])
+    db_session.commit()
+
+    response = client.post(
+        "/branches/1/stock/remove",
+        json={"product_id": 101, "amount": 10},
+        headers={"Authorization": f"Bearer {manager_token}"},
+    )
+
+    assert response.status_code == 400
+    # Check that exception message is formatted as expected
+    assert "Insufficient stock" in response.json()["detail"]
+    assert "3 available" in response.json()["detail"]
+
+    # Verify stock in DB was NOT changed
+    stock_in_db = db_session.query(Stock).filter_by(branch_id=1, product_id=101).first()
+    assert stock_in_db.quantity == 3
+
+
+def test_remove_stock_invalid_payload_returns_422(client, manager_token):
+    """Verifies Pydantic rejection for invalid values (amount <= 0, product_id <= 0, missing payload)."""
+    # Case 1: Amount <= 0
+    response_amount = client.post(
+        "/branches/1/stock/remove",
+        json={"product_id": 101, "amount": 0},
+        headers={"Authorization": f"Bearer {manager_token}"},
+    )
+    assert response_amount.status_code == 422
+
+    # Case 2: Product ID <= 0
+    response_prod = client.post(
+        "/branches/1/stock/remove",
+        json={"product_id": -1, "amount": 5},
+        headers={"Authorization": f"Bearer {manager_token}"},
+    )
+    assert response_prod.status_code == 422
+
+    # Case 3: Missing mandatory field
+    response_missing = client.post(
+        "/branches/1/stock/remove",
+        json={"amount": 5},
+        headers={"Authorization": f"Bearer {manager_token}"},
+    )
+    assert response_missing.status_code == 422

@@ -60,18 +60,30 @@ def remove_stock(db: Session, branch_id: int,
                  product_id: int, amount: int) -> int | None:
     result = db.execute(
         update(Stock)
-        .where(Stock.branch_id == branch_id, Stock.product_id == product_id,
-               Stock.quantity >= amount)
+        .where(
+            Stock.branch_id == branch_id,
+            Stock.product_id == product_id,
+            Stock.quantity >= amount
+        )
         .values(quantity=Stock.quantity - amount)
     )
     db.commit()
-    stock = get_stock(db, product_id=product_id, branch_id=branch_id)
+
+    # I prefer having the "success case" apart.
     if result.rowcount > 0:
-        return get_stock(db, product_id=product_id,
-                         branch_id=branch_id).quantity
+        updated_stock = get_stock(
+            db,
+            product_id=product_id,
+            branch_id=branch_id
+        )
+        return updated_stock.quantity
+    # Row count 0 means failure, we try to get stock to determine
+    #   it fails because "no matching row" OR "insufficient stock"
+    stock = get_stock(db, product_id=product_id, branch_id=branch_id)
     if stock is None:
         return None
     raise InsufficientStockError(available=stock.quantity)
+
 
 # ==== "Global Stock read methods" (used by Internal API) ====
 def list_stocks_for_product(db: Session, *, product_id: int) -> list[Stock]:
