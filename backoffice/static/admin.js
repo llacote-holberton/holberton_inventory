@@ -76,18 +76,27 @@ function renderUsers() {
     const row = document.createElement("div");
     row.className = `user-row ${user.is_active ? "" : "inactive"}`;
 
-    // Génération des options du menu déroulant (toutes les branches, la sienne est sélectionnée)
-    const branchOptions = branches
-      .map((b) => `<option value="${b.id}" ${b.id === user.branch_id ? "selected" : ""}>${b.label}</option>`)
-      .join("");
+    // 1. Condition sur le rôle pour l'affichage de la branche
+    let branchHtml = "";
+
+    if (user.role === "admin") {
+      // Pour les admins : pas de menu déroulant, juste un texte explicite
+      branchHtml = `<span class="no-branch" style="color: #888; font-style: italic;">N/A (Admin)</span>`;
+    } else {
+      // Pour les managers : menu déroulant avec sélection de leur branche
+      const branchOptions = branches
+        .map((b) => `<option value="${b.id}" ${b.id === user.branch_id ? "selected" : ""}>${b.label}</option>`)
+        .join("");
+
+      branchHtml = `<select aria-label="Branche assignée à ${user.name}">${branchOptions}</select>`;
+    }
 
     row.innerHTML = `
-      <!-- Correction : user.name au lieu de user.username -->
       <span class="username">${user.name} (${user.role})</span>
       <span class="status-badge ${user.is_active ? "active" : "inactive"}">
         ${user.is_active ? "Actif" : "Désactivé"}
       </span>
-      <select aria-label="Branche assignée à ${user.name}">${branchOptions}</select>
+      ${branchHtml}
       <div class="actions">
         <button type="button" class="pwd-btn">Changer mot de passe</button>
         <button type="button" class="toggle-btn ${user.is_active ? "deactivate" : "reactivate"}">
@@ -96,10 +105,16 @@ function renderUsers() {
       </div>
     `;
 
-    // Événements
-    row.querySelector("select").addEventListener("change", (e) => {
-      changeUserBranch(user.id, parseInt(e.target.value, 10));
-    });
+    // 2. Événement de changement de branche uniquement si le menu déroulant existe (managers)
+    const selectEl = row.querySelector("select");
+    if (selectEl) {
+      selectEl.addEventListener("change", (e) => {
+        const newBranchId = parseInt(e.target.value, 10);
+        changeUserBranch(user.id, newBranchId, user.branch_id);
+      });
+    }
+
+    // Événements communs
     row.querySelector(".pwd-btn").addEventListener("click", () => {
       changeUserPassword(user.id);
     });
@@ -143,10 +158,22 @@ function createUser(username, password, branchId) {
   renderUsers();
 }
 
-function changeUserBranch(userId, branchId) {
-  // TODO : PATCH vers USER_API_URL/{userId} avec { branch_id: branchId }
-  const user = users.find((u) => u.id === userId);
-  if (user) user.branch_id = branchId;
+async function changeUserBranch(userId, newBranchId, oldBranchId) {
+  // Si l'utilisateur réactive la même branche, on ne fait rien
+  if (newBranchId === oldBranchId) return;
+
+  const res = await apiFetch(`/users/${userId}/assign_branch`, {
+    method: "POST",
+    body: JSON.stringify({ branch_id: newBranchId })
+  });
+
+  if (res && res.ok) {
+    alert("Branche réaffectée avec succès !");
+    loadData(); // Synchronise l'interface
+  } else {
+    alert("Erreur : Impossible de réaffecter la branche.");
+    loadData(); // Remet le menu déroulant sur l'ancienne valeur en cas d'échec
+  }
 }
 
 function changeUserPassword(userId) {
