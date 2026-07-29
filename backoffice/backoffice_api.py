@@ -135,3 +135,17 @@ def list_branches_route(
         return crud.list_branches_ordered_by_label(db)
     return crud.list_branches(db)
 
+
+# Note: putting two routes with same method to try.
+# Ultimately it would probably be better to just have "one way"?
+# @app.get("/branches/find/{pattern}", response_model=list[BranchOut])
+@app.get("/search/branches/{pattern}", response_model=list[BranchOut])
+def find_branch_by_label(
+    pattern: str, 
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_admin_or_manager)
+):
+    branches = crud.find_branches_by_name(db, search_string=pattern)
+    if not branches:
+        raise HTTPException(status_code=404, detail="no_matching_branch_found")
+    return branches

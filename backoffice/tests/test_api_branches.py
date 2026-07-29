@@ -213,3 +213,55 @@ def test_list_branches_with_managers_false_as_manager_succeeds(manager_token, se
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 3
+
+
+# ========== SEARCH BRANCHES ENDPOINT TESTS ==========
+
+def test_search_branches_without_token_returns_401():
+    response = client.get("/search/branches/Paris")
+    assert response.status_code == 401
+
+
+def test_search_branches_by_name_as_manager_succeeds(manager_token, seed_branches_data):
+    response = client.get(
+        "/search/branches/Paris",
+        headers={"Authorization": f"Bearer {manager_token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) == 1
+    assert data[0]["label"] == "Paris"
+
+
+def test_search_branches_by_name_as_admin_succeeds(admin_token, seed_branches_data):
+    response = client.get(
+        "/search/branches/Bordeaux",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["label"] == "Bordeaux"
+
+
+def test_search_branches_partial_match_succeeds(manager_token, seed_branches_data):
+    # Si ta méthode CRUD gère le filtrage partiel (ex: "Bo" correspond à Bordeaux et Bourges)
+    response = client.get(
+        "/search/branches/Bo",
+        headers={"Authorization": f"Bearer {manager_token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    labels = [b["label"] for b in data]
+    assert "Bordeaux" in labels
+    assert "Bourges" in labels
+
+
+def test_search_branches_no_match_returns_404(manager_token, seed_branches_data):
+    response = client.get(
+        "/search/branches/Toulouse",
+        headers={"Authorization": f"Bearer {manager_token}"},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "no_matching_branch_found"
