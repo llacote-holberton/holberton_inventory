@@ -1,65 +1,83 @@
-const AI_SERVICE_BASE = "http://localhost:8003";
+// LOGIN FORM MANAGEMENT FROM GEMINI
+// ⚙️ CONFIGURATION : Endpoint API de connexion
+    const LOGIN_API_URL = "http://localhost:8000/login";
 
-const form = document.getElementById("chat-form");
-const questionField = document.getElementById("question");
-const responseBox = document.getElementById("response-box");
-const submitBtn = form.querySelector("button[type='submit']");
-const loadingMsg = document.getElementById("loading-msg");
+    document.getElementById("login-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
 
-let currentSource = null;
+      const errorEl = document.getElementById("error-msg");
+      errorEl.style.display = "none";
+      errorEl.textContent = "";
 
-form.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const question = questionField.value.trim();
-  if (!question) return;
+      // 🔍 3. Contrôles de sécurité & nettoyage basique
+      const rawUsername = document.getElementById("username").value;
+      const rawPassword = document.getElementById("password").value;
 
-  // 1. Fermer une éventuelle connexion SSE précédente encore active
-  if (currentSource) {
-    currentSource.close();
-  }
+      // a) Nettoyage des espaces superflus (Trim)
+      const username = rawUsername.trim();
+      const password = rawPassword;
 
-  // 2. Préparer l'interface (réinitialiser la boîte de réponse)
-  responseBox.classList.remove("error");
-  responseBox.textContent = "";
+      // b) Vérification des champs non vides
+      if (!username || !password) {
+        showError("Veuillez remplir tous les champs.");
+        return;
+      }
 
-  // 3. Verrouiller les champs et afficher le message d'attente
-  questionField.disabled = true;
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Recherche...";
-  if (loadingMsg) loadingMsg.hidden = false;
+      // c) Contrôle de longueur minimale
+      if (username.length < 3) {
+        showError("Le nom d'utilisateur doit faire au moins 3 caractères.");
+        return;
+      }
+      if (password.length < 4) {
+        showError("Le mot de passe doit faire au moins 4 caractères.");
+        return;
+      }
 
-  const url = `${AI_SERVICE_BASE}/ask/stream?question=${encodeURIComponent(question)}`;
-  currentSource = new EventSource(url);
+      // d) Neutralisation basique de caractères dangereux sur le username (XSS/Injection)
+      const sanitizedUsername = sanitizeInput(username);
 
-  // 4. Réception des morceaux de réponse (stream)
-  currentSource.onmessage = (event) => {
-    responseBox.textContent += event.data;
-  };
+      // 📤 2. Envoi du corps JSON exact
+      const payload = {
+        username: sanitizedUsername,
+        password: password
+      };
 
-  // 5. Fin de la réponse signalée par le serveur (événement nommé "done")
-  currentSource.addEventListener("done", () => {
-    cleanup();
-  });
+      try {
+        const response = await fetch(LOGIN_API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
 
-  // 6. Gestion des erreurs de connexion
-  currentSource.onerror = () => {
-    cleanup();
-    if (!responseBox.textContent) {
-      responseBox.textContent = "Le service est momentanément indisponible. Réessaie dans un instant.";
-      responseBox.classList.add("error");
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Stockage du token reçu
+          if (data.access_token || data.token) {
+            localStorage.setItem("access_token", data.access_token || data.token);
+          }
+
+          // Redirection vers le panneau d'administration du backoffice
+          window.location.href = "http://localhost:8000/ui/admin";
+        } else {
+          const errData = await response.json().catch(() => ({}));
+          showError(errData.detail || "Identifiants incorrects.");
+        }
+      } catch (error) {
+        console.error("Erreur d'authentification :", error);
+        showError("Impossible de contacter le serveur d'authentification.");
+      }
+    });
+
+    function showError(message) {
+      const errorEl = document.getElementById("error-msg");
+      errorEl.textContent = message;
+      errorEl.style.display = "block";
     }
-  };
 
-  // Restaure l'état du formulaire et masque le message d'attente
-  function cleanup() {
-    if (currentSource) {
-      currentSource.close();
-      currentSource = null;
+    // Fonction de nettoyage anti-XSS basique
+    function sanitizeInput(str) {
+      return str.replace(/[<>&"']/g, "");
     }
-    questionField.disabled = false;
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Envoyer";
-    if (loadingMsg) loadingMsg.hidden = true;
-    questionField.focus();
-  }
-});
