@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 import crud
 from api_models import LoginRequest
-from api_models import BranchOut
+from api_models import BranchOut, StockOut
 
 
 app = FastAPI(title="Hbntory Backoffice")
@@ -149,3 +149,24 @@ def find_branch_by_label(
     if not branches:
         raise HTTPException(status_code=404, detail="no_matching_branch_found")
     return branches
+
+
+# =============== STOCKS RELATED ROUTES ===============
+@app.get("/branches/{branch_id}/stocks", response_model=list[StockOut])
+def get_branch_stocks_route(
+    branch_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_manager),
+):
+    """Returns the stocks for manager's OWN branch ONLY"""
+    user_branch_id = current_user.get("branch_id")
+
+    # Include "None" case for Admin and bad faith attempts.
+    if user_branch_id is None or int(user_branch_id) != branch_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Trying to access another branch than yours",
+        )
+
+    return crud.list_stocks_for_branch(db, branch_id=branch_id)
+
