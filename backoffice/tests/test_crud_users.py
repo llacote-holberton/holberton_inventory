@@ -120,6 +120,24 @@ def test_assign_branch_manager_only(db, sample_branch):
     assert admin.branch_id is None
 
 
+def test_unassign_branch_from_manager(db, sample_branch):
+    """Verifies passing branch_id=None removes branch assignment from manager."""
+    manager = create_user(db, user_name="mgr_unassign", pwd_hash="hash", branch_id=sample_branch.id)
+    assert manager.branch_id == sample_branch.id
+
+    success = assign_branch(db, user_id=manager.id, branch_id=None)
+    db.refresh(manager)
+
+    assert success is True
+    assert manager.branch_id is None
+
+
+def test_assign_branch_non_existent_user_returns_false(db, sample_branch):
+    """Verifies assign_branch returns False for unknown user_id."""
+    result = assign_branch(db, user_id=9999, branch_id=sample_branch.id)
+    assert result is False
+
+
 def test_set_user_active_state(db):
     """Verifies toggling user active/inactive state."""
     user = create_user(db, user_name="eva", pwd_hash="hash")
