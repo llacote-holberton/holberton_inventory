@@ -1,42 +1,68 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HBntory — Stock de ma branche</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>Espace Manager - Gestion des Stocks</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; color: #333; }
+    h1, h2 { color: #2c3e50; }
+    .section { background: #fff; border: 1px solid #e0e0e0; padding: 20px; margin-bottom: 20px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .search-box, .stock-form { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    input, button { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+    button { cursor: pointer; background-color: #007bff; color: white; border: none; font-weight: bold; }
+    button:hover { opacity: 0.9; }
+    button.btn-add { background-color: #28a745; }
+    button.btn-remove { background-color: #dc3545; }
+    
+    .branch-results { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .branch-card { background: #e9ecef; border: 1px solid #ced4da; padding: 10px 15px; border-radius: 6px; cursor: pointer; }
+    .branch-card:hover, .branch-card.active { background: #007bff; color: white; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { text-align: left; padding: 10px; border-bottom: 1px solid #ddd; }
+    th { background-color: #f8f9fa; }
+    .empty-msg { color: #6c757d; italic; }
+  </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="wordmark">HBNTORY</div>
-    <nav class="topnav">
-      <a href="../client_web/index.html" class="nav-accent">Consulter l'Agent IA</a>
-    </nav>
-  </header>
 
-  <main class="page">
-    <h1>Stock de ma branche</h1>
+  <h1>Espace Manager — Gestion des Stocks</h1>
 
-    <section class="ticket">
-      <p class="ticket-label">Ajouter un produit au stock</p>
-      <form id="new-stock-form" class="inline-form">
-        <input type="text" id="new-product-id" placeholder="Identifiant ou SKU du produit" required>
-        <input type="number" id="new-product-qty" min="1" value="1" required>
-        <button type="submit" class="add">Ajouter au stock</button>
-      </form>
-    </section>
+  <!-- 1. Recherche de Branches -->
+  <div class="section">
+    <h2>1. Rechercher une Branche</h2>
+    <form id="search-form" class="search-box">
+      <input type="text" id="search-pattern" placeholder="Ex: Lyon, Paris..." required>
+      <button type="submit">Rechercher</button>
+    </form>
+    <div id="branch-results" class="branch-results"></div>
+  </div>
 
-    <h2 class="section-title">Stock actuel</h2>
-    <div id="stock-list" class="stock-list">
-      <p class="placeholder">Chargement du stock…</p>
-    </div>
-  </main>
+  <!-- 2. Consultation et Gestion des Stocks -->
+  <div id="stock-section" class="section" style="display: none;">
+    <h2 id="current-branch-title">Stocks de la branche</h2>
 
-  <footer class="footbar">
-    <span>© 2026 HBntory</span>
-    <a href="#">Legal</a>
-  </footer>
+    <!-- Formulaire d'ajout / retrait -->
+    <form id="stock-action-form" class="stock-form">
+      <input type="text" id="item-name" placeholder="Nom de l'article" required>
+      <input type="number" id="item-quantity" placeholder="Quantité" min="1" required>
+      <button type="button" id="btn-add-stock" class="btn-add">+ Ajouter au stock</button>
+      <button type="button" id="btn-remove-stock" class="btn-remove">- Retirer du stock</button>
+    </form>
+
+    <!-- Tableau d'affichage des stocks -->
+    <table>
+      <thead>
+        <tr>
+          <th>Article / Produit</th>
+          <th>Quantité en Stock</th>
+        </tr>
+      </thead>
+      <tbody id="stock-table-body">
+        <tr><td colspan="2" class="empty-msg">Aucune donnée de stock disponible.</td></tr>
+      </tbody>
+    </table>
+  </div>
 
   <script src="app.js"></script>
 </body>

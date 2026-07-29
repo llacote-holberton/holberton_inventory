@@ -1,144 +1,196 @@
 /**
- * Interface manager (stock de la branche).
- *
- * TODO (une fois l'API du Backoffice prête côté binôme) :
- *   - Remplacer STOCK_API_URL par le vrai endpoint (ex. GET /api/stock/mine)
- *   - Envoyer le token d'authentification (ex. header Authorization) —
- *     rappel de la consigne : l'accès au Backoffice doit être authentifié
- *   - Remplacer adjustStock() par de vrais appels
- *     POST /api/stock/add et POST /api/stock/remove
- *   - Retirer MOCK_STOCK : ces données ne servent qu'à visualiser
- *     l'interface avant que le Backoffice soit prêt.
+ * Interface Manager (Recherche branches + Gestion stocks).
+ * 
+ * Endpoints utilisés :
+ *  - GET  /search/branches/{pattern}
+ *  - GET  /branches/{branch_id}/stocks
+ *  - POST /branches/{branch_id}/stock/add
+ *  - POST /branches/{branch_id}/stock/remove
  */
 
-const STOCK_API_URL = "http://localhost:8000/api/stock/mine";
+const API_BASE = "http://localhost:8000";
 
-const MOCK_STOCK = [
-  { id: 32, name: "Legacy VGA Adapter", category: "Accessories", supplier: "OpsReady Warehouse", quantity: 15 },
-  { id: 33, name: "RFID Access Card Pack", category: "Security", supplier: "WebCraft Devices", quantity: 0 },
-  { id: 34, name: "USB Security Key", category: "Security", supplier: "WebCraft Devices", quantity: 42 },
-];
+let currentBranchId = null;
 
-// Utilisé uniquement en mode mock pour simuler l'enrichissement que le
-// vrai Backoffice ferait via l'API Produit (nom, catégorie, fournisseur)
-// quand on ajoute un produit pas encore stocké dans la branche.
-const MOCK_CATALOG = {
-  32: { name: "Legacy VGA Adapter", category: "Accessories", supplier: "OpsReady Warehouse" },
-  33: { name: "RFID Access Card Pack", category: "Security", supplier: "WebCraft Devices" },
-  34: { name: "USB Security Key", category: "Security", supplier: "WebCraft Devices" },
-  40: { name: "Wireless Presenter Clicker", category: "Accessories", supplier: "ClickTech" },
-};
-
-const stockListEl = document.getElementById("stock-list");
-let stockData = [];
-
-function escapeHtml(str) {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+// Helper d'en-tête pour l'authentification JWT
+function getAuthHeaders() {
+  const token = localStorage.getItem("access_token");
+  return {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`
+  };
 }
 
-function renderStock() {
-  stockListEl.innerHTML = "";
+// -------------------------------------------------------------
+// 1. GET /search/branches/{pattern}
+// -------------------------------------------------------------
+async function searchBranches(pattern) {
+  try {
+    const response = await fetch(`${API_BASE}/search/branches/${encodeURIComponent(pattern)}`, {
+      headers: getAuthHeaders()
+    });
 
-  stockData.forEach((item) => {
+    if (response.status === 401) {
+      alert("Session expirée. Veuillez vous re-connecter.");
+      window.location.href = `${API_BASE}/login.html`;
+      return;
+    }
+
+    if (!response.ok) throw new Error("Erreur lors de la recherche des branches");
+
+    const branches = await response.json();
+    renderBranchResults(branches);
+  } catch (error) {
+    console.error("Erreur searchBranches:", error);
+    alert("Impossible de rechercher les branches.");
+  }
+}
+
+function renderBranchResults(branches) {
+  const container = document.getElementById("branch-results");
+  container.innerHTML = "";
+
+  if (branches.length === 0) {
+    container.innerHTML = "<p class='empty-msg'>Aucune branche trouvée.</p>";
+    return;
+  }
+
+  branches.forEach((branch) => {
     const card = document.createElement("div");
-    card.className = "stock-card";
-    card.innerHTML = `
-      <div class="stock-tag">#${item.id}</div>
-      <div class="stock-name">${item.name}</div>
-      <div class="stock-meta">
-        <span>Catégorie : ${item.category}</span>
-        <span>Fournisseur : ${item.supplier}</span>
-      </div>
-      <div class="stock-qty">
-        <span class="current ${item.quantity === 0 ? "zero" : ""}">Quantité actuelle : ${item.quantity}</span>
-        <input type="number" min="1" value="1" aria-label="Quantité à ajouter ou retirer pour ${item.name}">
-        <button class="add" type="button">Ajouter</button>
-        <button class="remove" type="button">Retirer</button>
-      </div>
-    `;
-
-    const input = card.querySelector("input");
-    card.querySelector(".add").addEventListener("click", () => {
-      adjustStock(item.id, parseInt(input.value, 10) || 0);
-    });
-    card.querySelector(".remove").addEventListener("click", () => {
-      adjustStock(item.id, -(parseInt(input.value, 10) || 0));
-    });
-
-    stockListEl.appendChild(card);
+    card.className = "branch-card";
+    card.textContent = `#${branch.id} - ${branch.name}`;
+    card.addEventListener("click", () => selectBranch(branch));
+    container.appendChild(card);
   });
 }
 
-async function adjustStock(productId, delta) {
-  const item = stockData.find((p) => p.id === productId);
-  if (!item) return;
-
-  const newQuantity = item.quantity + delta;
-  if (newQuantity < 0) {
-    alert("La quantité en stock ne peut pas devenir négative.");
-    return;
-  }
-
-  // TODO : remplacer par un vrai appel POST /api/stock/add ou
-  // /api/stock/remove vers le Backoffice une fois l'endpoint prêt.
-  // Pour l'instant, mise à jour locale uniquement (mode mock).
-  item.quantity = newQuantity;
-  renderStock();
+function selectBranch(branch) {
+  currentBranchId = branch.id;
+  document.getElementById("current-branch-title").textContent = `Stocks de la branche : ${branch.name} (#${branch.id})`;
+  document.getElementById("stock-section").style.display = "block";
+  loadBranchStocks(branch.id);
 }
 
-async function loadStock() {
+// -------------------------------------------------------------
+// 2. GET /branches/{branch_id}/stocks
+// -------------------------------------------------------------
+async function loadBranchStocks(branchId) {
   try {
-    const response = await fetch(STOCK_API_URL);
-    if (!response.ok) throw new Error(`Statut HTTP ${response.status}`);
-    stockData = await response.json();
+    const response = await fetch(`${API_BASE}/branches/${branchId}/stocks`, {
+      headers: getAuthHeaders()
+    });
+
+    if (!response.ok) throw new Error("Erreur lors du chargement des stocks");
+
+    const stocks = await response.json();
+    renderStocksTable(stocks);
   } catch (error) {
-    // Le Backoffice n'est pas encore prêt : on retombe sur des données de
-    // démonstration pour pouvoir travailler l'interface dès maintenant.
-    stockData = MOCK_STOCK;
+    console.error("Erreur loadBranchStocks:", error);
+    alert("Erreur lors du chargement des stocks.");
   }
-  renderStock();
 }
 
-function addNewProductStock(productId, quantity) {
-  const existing = stockData.find((p) => p.id === productId);
-  if (existing) {
-    // Le produit est déjà en stock dans cette branche : on incrémente au
-    // lieu de créer une deuxième ligne pour le même produit.
-    adjustStock(productId, quantity);
+function renderStocksTable(stocks) {
+  const tbody = document.getElementById("stock-table-body");
+  tbody.innerHTML = "";
+
+  // Supporte liste d'objets [{item_name, quantity}] ou dictionnaire {item: qty}
+  const stockItems = Array.isArray(stocks) 
+    ? stocks 
+    : Object.entries(stocks).map(([item_name, quantity]) => ({ item_name, quantity }));
+
+  if (stockItems.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="2" class="empty-msg">Aucun produit en stock dans cette branche.</td></tr>`;
     return;
   }
 
-  // TODO : en vrai, le Backoffice doit d'abord vérifier que ce produit
-  // existe réellement (via l'API Produit, à travers le serveur MCP ou un
-  // appel direct côté Backoffice) avant de créer une ligne de stock, et
-  // renvoyer nom/catégorie/fournisseur depuis cette vérification plutôt
-  // que depuis un catalogue local comme ici.
-  const catalogEntry = MOCK_CATALOG[productId] || {
-    name: `Produit #${productId} (non reconnu en mode mock)`,
-    category: "Inconnue",
-    supplier: "Inconnu",
-  };
-
-  stockData.push({ id: productId, quantity, ...catalogEntry });
-  renderStock();
+  stockItems.forEach((item) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td><strong>${item.item_name || item.name || item.item_id}</strong></td>
+      <td>${item.quantity}</td>
+    `;
+    tbody.appendChild(row);
+  });
 }
 
-document.getElementById("new-stock-form").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const idInput = document.getElementById("new-product-id");
-  const qtyInput = document.getElementById("new-product-qty");
-  const productId = parseInt(idInput.value, 10);
-  const quantity = parseInt(qtyInput.value, 10);
-  if (!productId || !quantity || quantity <= 0) return;
+// -------------------------------------------------------------
+// 3. POST /branches/{branch_id}/stock/add
+// -------------------------------------------------------------
+async function addStock() {
+  if (!currentBranchId) return;
 
-  addNewProductStock(productId, quantity);
-  idInput.value = "";
-  qtyInput.value = "1";
+  const itemName = document.getElementById("item-name").value.trim();
+  const quantity = parseInt(document.getElementById("item-quantity").value, 10);
+
+  if (!itemName || isNaN(quantity) || quantity <= 0) {
+    alert("Saisie invalide pour le stock.");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/branches/${currentBranchId}/stock/add`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ item_name: itemName, quantity: quantity })
+    });
+
+    if (response.ok) {
+      clearStockForm();
+      await loadBranchStocks(currentBranchId);
+    } else {
+      const err = await response.json().catch(() => ({}));
+      alert(err.detail || "Erreur lors de l'ajout du stock.");
+    }
+  } catch (error) {
+    console.error("Erreur addStock:", error);
+  }
+}
+
+// -------------------------------------------------------------
+// 4. POST /branches/{branch_id}/stock/remove
+// -------------------------------------------------------------
+async function removeStock() {
+  if (!currentBranchId) return;
+
+  const itemName = document.getElementById("item-name").value.trim();
+  const quantity = parseInt(document.getElementById("item-quantity").value, 10);
+
+  if (!itemName || isNaN(quantity) || quantity <= 0) {
+    alert("Saisie invalide pour le retrait du stock.");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/branches/${currentBranchId}/stock/remove`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ item_name: itemName, quantity: quantity })
+    });
+
+    if (response.ok) {
+      clearStockForm();
+      await loadBranchStocks(currentBranchId);
+    } else {
+      const err = await response.json().catch(() => ({}));
+      alert(err.detail || "Erreur lors du retrait du stock.");
+    }
+  } catch (error) {
+    console.error("Erreur removeStock:", error);
+  }
+}
+
+function clearStockForm() {
+  document.getElementById("item-name").value = "";
+  document.getElementById("item-quantity").value = "";
+}
+
+// Event Listeners
+document.getElementById("search-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const pattern = document.getElementById("search-pattern").value.trim();
+  if (pattern) searchBranches(pattern);
 });
 
-loadStock();
+document.getElementById("btn-add-stock").addEventListener("click", addStock);
+document.getElementById("btn-remove-stock").addEventListener("click", removeStock);
