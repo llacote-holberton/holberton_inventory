@@ -19,7 +19,7 @@
 
     <section class="ticket">
       <p class="ticket-label">Espace Restreint (Manager / Admin)</p>
-      
+      <!-- OLD VERSION AS MODAL
       <form id="login-form" class="login-form">
         <div class="form-group">
           <label for="username">Identifiant</label>
@@ -35,7 +35,21 @@
 
         <button type="submit" id="submit-btn" class="add">Se connecter</button>
       </form>
-    </section>
+    -->
+    <form id="login-form" class="login-form" novalidate>
+      <div class="form-group">
+        <label for="username">Identifiant</label>
+        <input type="text" id="username" placeholder="ex: j.martin" autocomplete="username" required maxlength="50">
+      </div>
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required maxlength="128">
+      </div>
+      <button type="submit">S'authentifier</button>
+      <div id="error-msg" class="error-message"></div>
+    </form>
+  </section>
+
   </main>
 
   <footer class="footbar">
@@ -43,6 +57,6 @@
     <a href="#">Legal</a>
   </footer>
 
-  <script src="login.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
