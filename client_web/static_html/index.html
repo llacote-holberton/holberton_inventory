@@ -1,18 +1,17 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HBntory — Assistant Produits &amp; Stock</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HBntory — Assistant Produits &amp; Stock</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="topbar">
     <div class="wordmark">HBNTORY</div>
     <nav class="topnav">
       <a href="index.html">Home</a>
-      <a href="../manager_web/index.html" class="nav-accent">Accéder au Back</a>
+      <a href="login.html" class="nav-accent">Login</a>
     </nav>
   </header>
 
@@ -31,7 +30,11 @@
 
     <form id="chat-form" class="ask-form">
       <textarea id="question" rows="3" placeholder="Tapez votre question ici..." required></textarea>
-      <button type="submit">Envoyer</button>
+      
+      <div class="form-actions">
+        <span id="loading-msg" class="loading-msg" hidden>Merci! Votre demande a été prise en compte, merci de patienter...</span>
+        <button type="submit">Envoyer</button>
+      </div>
     </form>
 
     <section class="ticket response">
