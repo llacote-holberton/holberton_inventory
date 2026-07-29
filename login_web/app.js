@@ -8,16 +8,6 @@ const loadingMsg = document.getElementById("loading-msg");
 
 let currentSource = null;
 
-// Gestion des touches Entrée et Shift+Entrée
-questionField.addEventListener("keydown", (event) => {
-  if (event.key === "Enter" && !event.shiftKey) {
-    event.preventDefault(); // Évite le saut de ligne non désiré
-    if (!submitBtn.disabled) {
-      form.requestSubmit(); // Déclenche l'événement submit du formulaire
-    }
-  }
-});
-
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   const question = questionField.value.trim();
