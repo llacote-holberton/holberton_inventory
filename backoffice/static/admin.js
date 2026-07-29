@@ -53,53 +53,65 @@ function renderBranchSelect() {
 }
 
 function renderBranches() {
+  if (!branchListEl) return;
   branchListEl.innerHTML = "";
   branches.forEach((branch) => {
     const chip = document.createElement("div");
     chip.className = "branch-chip";
     chip.innerHTML = `
       <span class="tag">#${branch.id}</span>
-      <span>${branch.name}</span>
-      <button type="button" aria-label="Supprimer la branche ${branch.name}">✕</button>
+      <span>${branch.name || branch.label}</span>
+      <button type="button" disabled style="opacity:0.4; cursor:not-allowed;" title="Non disponible dans cette version">✕</button>
     `;
-    chip.querySelector("button").addEventListener("click", () => deleteBranch(branch.id));
     branchListEl.appendChild(chip);
   });
   renderBranchSelect();
 }
 
 function renderUsers() {
+  if (!userListEl) return;
   userListEl.innerHTML = "";
+
   users.forEach((user) => {
     const row = document.createElement("div");
-    row.className = `user-row ${user.active ? "" : "inactive"}`;
+    row.className = `user-row ${user.is_active ? "" : "inactive"}`;
 
+    // Génération des options du menu déroulant (toutes les branches, la sienne est sélectionnée)
     const branchOptions = branches
-      .map((b) => `<option value="${b.id}" ${b.id === user.branch_id ? "selected" : ""}>${b.name}</option>`)
+      .map((b) => `<option value="${b.id}" ${b.id === user.branch_id ? "selected" : ""}>${b.label}</option>`)
       .join("");
 
     row.innerHTML = `
-      <span class="username">${user.username}</span>
-      <span class="status-badge ${user.active ? "active" : "inactive"}">${user.active ? "Actif" : "Désactivé"}</span>
-      <select aria-label="Branche assignée à ${user.username}">${branchOptions}</select>
+      <!-- Correction : user.name au lieu de user.username -->
+      <span class="username">${user.name} (${user.role})</span>
+      <span class="status-badge ${user.is_active ? "active" : "inactive"}">
+        ${user.is_active ? "Actif" : "Désactivé"}
+      </span>
+      <select aria-label="Branche assignée à ${user.name}">${branchOptions}</select>
       <div class="actions">
         <button type="button" class="pwd-btn">Changer mot de passe</button>
-        <button type="button" class="toggle-btn ${user.active ? "deactivate" : "reactivate"}">
-          ${user.active ? "Désactiver" : "Réactiver"}
+        <button type="button" class="toggle-btn ${user.is_active ? "deactivate" : "reactivate"}">
+          ${user.is_active ? "Désactiver" : "Réactiver"}
         </button>
       </div>
     `;
 
-    row.querySelector("select").addEventListener("change", (event) => {
-      changeUserBranch(user.id, parseInt(event.target.value, 10));
+    // Événements
+    row.querySelector("select").addEventListener("change", (e) => {
+      changeUserBranch(user.id, parseInt(e.target.value, 10));
     });
-    row.querySelector(".pwd-btn").addEventListener("click", () => changeUserPassword(user.id));
-    row.querySelector(".toggle-btn").addEventListener("click", () => toggleUserActive(user.id));
+    row.querySelector(".pwd-btn").addEventListener("click", () => {
+      changeUserPassword(user.id);
+    });
+    row.querySelector(".toggle-btn").addEventListener("click", () => {
+      toggleUserActive(user.id, user.is_active);
+    });
 
     userListEl.appendChild(row);
   });
 }
 
+/* COMMENTED FOR DEMO
 function createBranch(name) {
   // TODO : POST vers BRANCH_API_URL, puis utiliser l'id renvoyé par le
   // Backoffice au lieu de nextBranchId généré côté client.
@@ -121,6 +133,7 @@ function deleteBranch(branchId) {
   renderBranches();
   renderUsers();
 }
+*/
 
 function createUser(username, password, branchId) {
   // TODO : POST vers USER_API_URL avec { username, password, branch_id }.
@@ -153,22 +166,25 @@ function toggleUserActive(userId) {
 
 async function loadData() {
   try {
+    // Recommandé : appels parallèles sécurisés via apiFetch
     const [branchResp, userResp] = await Promise.all([
-      fetch(BRANCH_API_URL),
-      fetch(USER_API_URL),
+      apiFetch("/branches"),
+      apiFetch("/users")
     ]);
-    if (!branchResp.ok || !userResp.ok) throw new Error("Statut HTTP inattendu");
+
+    if (!branchResp.ok || !userResp.ok) {
+      alert("Erreur lors de la récupération des données.");
+      return;
+    }
+
     branches = await branchResp.json();
     users = await userResp.json();
+
+    renderBranches();
+    renderUsers();
   } catch (error) {
-    // Le Backoffice n'est pas encore prêt : données de démonstration.
-    branches = MOCK_BRANCHES;
-    users = MOCK_USERS;
+    console.error("Erreur serveur :", error);
   }
-  nextBranchId = Math.max(0, ...branches.map((b) => b.id)) + 1;
-  nextUserId = Math.max(0, ...users.map((u) => u.id)) + 1;
-  renderBranches();
-  renderUsers();
 }
 
 document.getElementById("branch-form").addEventListener("submit", (event) => {
