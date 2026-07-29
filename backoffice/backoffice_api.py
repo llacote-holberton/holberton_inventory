@@ -10,7 +10,9 @@ from database import get_db
 import crud
 from api_models import LoginRequest
 from api_models import BranchOut, StockOut
-
+# New imports for static files serving.
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="Hbntory Backoffice")
 
@@ -245,3 +247,32 @@ def remove_stock_route(
     return {"branch_id": branch_id, "product_id": p_id, "quantity": new_quantity}
 
 
+# =============== BACKOFFICE UI - Static pages ===============
+# Retrieving "true local path contextually" to cover both 
+#   "from host" and "in docker container" cases.
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static_html"
+
+app.mount("/ui/admin", StaticFiles(directory=str(STATIC_DIR / "admin_web"), html=True), name="admin_web")
+app.mount("/ui/manager", StaticFiles(directory=str(STATIC_DIR / "manager_web"), html=True), name="manager_web")
+app.mount("/ui/login", StaticFiles(directory=str(STATIC_DIR / "login_web"), html=True), name="login_web")
+
+
+# Setting redirects to cover all cases:
+# /login & /login.html -> /ui/login/
+@app.get("/login")
+@app.get("/login.html")
+def redirect_login():
+    return RedirectResponse(url="/ui/login/")
+
+
+# ALSO redirect the root (ideally would redirect)
+# For now basic redirection, ideally we would redirect
+#   to the right page if authentified with the right role
+#   and specific error page if authentified but no role
+#   (which could mean attempt to breach by the way)
+@app.get("/")
+@app.get("/index.html")
+def root_redirect():
+    return RedirectResponse(url="/ui/login/")
