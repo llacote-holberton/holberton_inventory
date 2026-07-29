@@ -1,5 +1,9 @@
-fastapi>=0.111.0
-uvicorn[standard]>=0.30.0
-google-adk>=1.0.0
-pydantic>=2.7.0
-python-dotenv>=1.0.0
+# USed to exploit local environment variables
+python-dotenv
+# Used to serve an HTTP server with API support
+#   (for now just used for healthchecks)
+fastapi
+uvicorn[standard]
+# Libraries for testing
+pytest
+httpx2

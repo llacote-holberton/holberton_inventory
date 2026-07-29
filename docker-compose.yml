@@ -1,0 +1,180 @@
+# Docker composition orchestrating several containers to set up an inventory management application
+# Lancement : docker compose -f hbntory_bo_docker-compose.yml up -d
+# Arrêt     : docker compose -f hbntory_bo_docker-compose.yml down -v
+
+name: ${COMPOSE_PROJECT_NAME}
+
+services:
+  # Holds the data pertaining quantities of products per store.
+  stocks-db:
+    image: mariadb:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-stocks-db # Mandatory to avoid -n suffix for scaling
+    environment:
+      - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      # MariaDB_USER is automatically understood as "database admin" so all permissions granted.
+      - MARIADB_DATABASE=${DB_HBNTORY_BASENAME}
+      - MARIADB_USER=${DB_HBNTORY_USER_ID}
+      - MARIADB_PASSWORD=${DB_HBNTORY_USER_PWD}
+    ports:
+      # Note: "internal port" MUST be fixed because it is the one configured by default by MariaDB
+      # Making it dynamic would require creating a dockerfile just for that. No identified benefit.
+      - "${DB_PORT}:3306"
+    volumes:
+      - stock_db_data:/var/lib/mysql
+      - ${PWD}/backoffice/init:/docker-entrypoint-initdb.d
+
+  # Exposes detailed information for all products potentially available in company's stores
+  products-api:
+    build:
+      context: https://github.com/hbtn-edu/hbntory-products-api.git#08497b1263a39aaddaf43a405722cbe93fc25b78
+    image: hbntory_products_api:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-products-api
+    environment:
+      - HBN_PRODUCTS_PORT=${HBN_PRODUCTS_PORT:-5000}
+    restart: unless-stopped
+    ports:
+      - "${PRODUCTS_API_PORT:-5000}:${HBN_PRODUCTS_PORT:-5000}"
+
+  internal-api:
+    build:
+      context: ${PWD}/backoffice
+      dockerfile: Dockerfile.internal_api
+      # WARNING: using this would probably mess with COPY instructions inside
+      #   because would be evaluated from "context" which would be one level too high.
+      # context: ${PWD}
+      # dockerfile: ./backoffice/Dockerfile.internal_api
+    container_name: ${COMPOSE_PROJECT_NAME}-internal-api
+    environment:
+      - DB_HBNTORY_BASENAME=${DB_HBNTORY_BASENAME:-holberton_inventory}
+      - DB_HBNTORY_USER_PWD=${DB_HBNTORY_USER_PWD}
+      - DB_HBNTORY_USER_ID=${DB_HBNTORY_USER_ID}
+      # No need to prefix with COMPOSE_PROJECT_NAME / use container_name here:
+      #   Docker's internal DNS also resolves hostnames from the service name alone,
+      #   which is more robust (doesn't break if container_name changes later).
+      # - DB_HOST=${COMPOSE_PROJECT_NAME}-stocks-db
+      - DB_HOST=stocks-db
+      - DB_PORT=3306
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+    ports:
+      - "${INTERNAL_API_PORT:-8002}:${INTERNAL_API_PORT:-8002}"
+    depends_on:
+      - stocks-db
+
+  backoffice:
+    build:
+      context: ${PWD}/backoffice
+      dockerfile: Dockerfile.backoffice
+    container_name: ${COMPOSE_PROJECT_NAME}-backoffice
+    environment:
+      # Using syntax providing default value as fallback,
+      # :- means "use that if target is Undefined OR empty"
+      - DB_HBNTORY_BASENAME=${DB_HBNTORY_BASENAME:-holberton_inventory}
+      # No default because is essential info should always be provided
+      - DB_HBNTORY_USER_PWD=${DB_HBNTORY_USER_PWD}
+      - DB_HBNTORY_USER_ID=${DB_HBNTORY_USER_ID}
+      - DB_HOST=stocks-db
+      - DB_PORT=3306
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_EXPIRE_MINUTES=${JWT_EXPIRE_MINUTES:-60}
+    ports:
+      - "${BACKOFFICE_PORT}:${BACKOFFICE_PORT}"
+    depends_on:
+      - stocks-db
+
+  mcp-server:
+      build:
+        context: ${PWD}/product_mcp_server
+        dockerfile: Dockerfile.mcp_server
+        # Only way to transmit dynamic values to the Dockerfile
+        #   as the environment variables are not exploitable directly there.
+        args:
+          MCP_SERVER_PORT: ${MCP_SERVER_PORT:-8001}
+      container_name: ${COMPOSE_PROJECT_NAME}-mcp-server
+      ports:
+        # Warning: right side port must match port(s) exposed in DockerFile
+        - "${MCP_SERVER_PORT:-8001}:${MCP_SERVER_PORT:-8001}"
+      environment:
+        - MCP_SERVER_PORT=${MCP_SERVER_PORT:-8001}
+        # Kept for now in case of, but hardcoded in Python to ensure it listens to all.
+        # - MCP_SERVER_HOST=0.0.0.0
+        # Deactivated, not useful for our context and could bring confusion
+        # CONFIGURATION to access Product API
+        - PRODUCTS_API_HOST=products-api
+        # Now that we expose the actual variable used in external API dockerfile
+        #   we must "target it" here too. ${PRODUCTS_API_PORT} -> ${HBN_PRODUCTS_PORT}
+        - PRODUCTS_API_PORT=${HBN_PRODUCTS_PORT:-5000}
+        - INTERNAL_API_HOST=internal-api
+        - INTERNAL_API_PORT=${INTERNAL_API_PORT:-8002}
+        - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      # Suggested by AI to better control networks but overkill for us for now,
+      #   bad "complexity/benefit" ratio, will be kept as potential security improvement.
+      # networks:
+      #  - hbntory_net
+      depends_on:
+        - products-api
+        - internal-api
+      restart: unless-stopped
+
+  ai-service:
+    build:
+      context: ${PWD}/ai_service
+      dockerfile: Dockerfile.ai_service
+    container_name: ${COMPOSE_PROJECT_NAME}-ai-service
+    ports:
+      - "${AI_SERVICE_PORT:-8003}:8003"
+    environment:
+      - AI_SERVICE_PORT=${AI_SERVICE_PORT:-8003}
+      # Name of docker service since we are within same network.
+      # Here it is not read from .env since it depends on this file's own structure.
+      - MCP_SERVER_HOST=mcp-server
+      # Reusing the variable to ensure we request to the right port.
+      - MCP_SERVER_PORT=${MCP_SERVER_PORT:-8001}
+      # Model agnostic configuration (name and if need be API key)
+      - LLM_MODEL_NAME=${LLM_MODEL_NAME}
+      - LLM_MODEL_API_KEY=${LLM_MODEL_API_KEY}
+      # Used to tell Python to not output Warning level (only) messages
+      # Useful because Google ADK will otherwise output several warnings during use
+      # One at start because cannot connect to Google Cloud since we didn't configure
+      #   "Google Application Default Credentials" so warns it fallbacks on "local".
+      # Others during run because it has features still in "experimental stage".
+      - PYTHONWARNINGS=ignore
+    depends_on:
+      - mcp-server
+    restart: unless-stopped
+
+  web-client:
+    build:
+      context: ${PWD}/client_web
+      dockerfile: Dockerfile.client_web
+    container_name: ${COMPOSE_PROJECT_NAME}-web-client
+    ports:
+      - "${CLIENT_PORT:-8080}:${CLIENT_PORT:-8080}"
+    environment:
+      - CLIENT_PORT=${CLIENT_PORT:-8080}
+      # FIXME There will certainly be other environment variables
+      #   to set here so that the javascript app knows how to reach
+      #   other Docker services, but in a first step I just want "service up".
+    depends_on:
+      - ai-service
+    restart: unless-stopped
+
+
+volumes:
+  stock_db_data:
+    # driver: local
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: ${PWD}/stock_db_data
+
+    # Using an explicit bind mount causes potential problems as the files/folder created for db data
+    #   are created "on host filesystem" BUT with inner mariadb user (999).
+    # To avoid this we would need to use a custom DockerFile for mariadb container just to set its uid/guid
+    # FROM mariadb:latest
+    # RUN usermod -u 1000 mysql && groupmod -g 1000 mysql
+    # As apaprently this approach does not even provides benefit for data save/recovery strategy let's drop it.
+
+    # Good practice to save is to trigger a dump inside the container but have it redirected to a host file.
+    # docker exec hbntory_db mariadb-dump -u root -pH0lb3rt0n holberton_inventory \
+    #   > /chemin/vers/nos_backups/backup_$(date +%Y%m%d).sql

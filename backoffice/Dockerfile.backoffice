@@ -16,5 +16,12 @@ COPY api_models.py auth.py backoffice_api.py ./
 # Related tests files
 COPY tests/test_api_users.py ./tests/
 
+# Make logs from Python app appear instantly in docker compose logs
+ENV PYTHONUNBUFFERED=1
+
+# Define listening port from environment variable
+ENV BACKOFFICE_PORT=8000
+EXPOSE ${BACKOFFICE_PORT}
+
 # Setting a command to be runned automatically when container starts
-CMD ["uvicorn", "internal_api:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn backoffice_api:app --host 0.0.0.0 --port ${BACKOFFICE_PORT}"]
