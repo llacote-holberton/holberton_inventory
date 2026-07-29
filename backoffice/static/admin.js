@@ -196,12 +196,18 @@ async function changeUserPassword(userId) {
   }
 }
 
-function toggleUserActive(userId) {
-  // TODO : PATCH vers USER_API_URL/{userId} avec { active: !user.active }
-  // (soft-delete : on désactive, on ne supprime jamais la ligne)
-  const user = users.find((u) => u.id === userId);
-  if (user) user.active = !user.active;
-  renderUsers();
+async function toggleUserActive(userId, currentStatus) {
+  const endpoint = currentStatus 
+    ? `/users/${userId}/deactivate` 
+    : `/users/${userId}/activate`;
+
+  const res = await apiFetch(endpoint, { method: "POST" });
+
+  if (res && res.ok) {
+    loadData();
+  } else {
+    alert("Impossible de modifier le statut de l'utilisateur.");
+  }
 }
 
 async function loadData() {
