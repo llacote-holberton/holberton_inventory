@@ -1,0 +1,18 @@
+# Base image
+FROM python:3.14-slim
+# Host dir for app inside container
+WORKDIR /app
+# Copy "requirements from host fs to workdir in container"
+COPY requirements.txt .
+# Exploit it to install all Python libraries.
+RUN pip install --no-cache-dir -r requirements.txt
+# Copy the app's files (separated because those may change)
+COPY . .
+
+# Defining an 'ARG' (must match a subkey of 'args' in build.args in docker compose)
+#   the =8001 is a fallback value
+ARG MCP_SERVER_PORT=8001
+# Open a port on container
+EXPOSE ${MCP_SERVER_PORT}
+# Run command
+CMD ["python", "server_mcp.py"]

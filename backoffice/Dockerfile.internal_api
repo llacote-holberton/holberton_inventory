@@ -17,4 +17,4 @@ COPY api_models.py internal_api.py ./
 COPY tests/test_internal_api.py ./tests/
 
 # Setting a command to be runned automatically when container starts
-CMD ["uvicorn", "internal_api:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["sh", "-c", "uvicorn internal_api:app --host 0.0.0.0 --port ${INTERNAL_API_PORT:-8002}"]
