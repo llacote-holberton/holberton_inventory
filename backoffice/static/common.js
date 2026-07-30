@@ -6,36 +6,55 @@ const BACKOFFICE_API_ROOT = window.location.origin;
 
 
 // ============== 1. Vérification immédiate de l'authentification ============
-function checkAuth() {
+async function checkAuth() {
+    // 1. Ne rien faire si on est déjà sur la page de login
     if (window.location.pathname.includes("/login")) return;
 
     const token = localStorage.getItem("token");
 
+    // 2. Si aucun token n'est présent -> redirection immédiate
     if (!token) {
         window.location.href = "/ui/login";
         return;
     }
 
-    // Récupérer le rôle (localStorage ou directement depuis le token JWT)
-    let role = localStorage.getItem("role");
+    try {
+        // 3. VÉRIFICATION SÉCURISÉE : On demande au serveur de valider la signature du token
+        const response = await fetch("/whoami", {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
 
-    if (!role && token) {
-        try {
-            const payload = JSON.parse(atob(token.split(".")[1]));
-            role = payload.role;
-            if (role) localStorage.setItem("role", role);
-        } catch (e) {
-            console.error("Impossible de lire le rôle depuis le token", e);
+        // Si le serveur rejette le token (falsifié, expiré ou corrompu)
+        if (!response.ok) {
+            throw new Error("Token invalide ou rejeté par le serveur");
         }
-    }
 
-    // Formatage en minuscules pour éviter les pièges ("ADMIN" vs "admin")
-    const cleanRole = (role || "").toLowerCase();
+        // Le serveur renvoie le payload certifié par la clé secrète du Backoffice
+        const currentUser = await response.json();
 
-    // Vérification de l'accès Admin
-    if (window.location.pathname.includes("/admin") && cleanRole !== "admin") {
-        alert(`Accès refusé : réservé aux administrateurs (votre rôle : ${role || "inconnu"}).`);
-        window.location.href = "/ui/manager";
+        // Extraction sécurisée du rôle et du branch_id
+        const role = currentUser.role || "";
+        const cleanRole = role.toLowerCase();
+
+        // Mettre à jour le localStorage avec les vraies valeurs du serveur
+        localStorage.setItem("role", cleanRole);
+        if (currentUser.branch_id !== undefined) {
+            localStorage.setItem("branch_id", currentUser.branch_id);
+        }
+
+        // 4. Contrôle d'accès à la page Admin
+        if (window.location.pathname.includes("/admin") && cleanRole !== "admin") {
+            alert(`Accès refusé : réservé aux administrateurs (votre rôle : ${role || "inconnu"}).`);
+            window.location.href = "/ui/manager";
+        }
+
+    } catch (e) {
+        console.warn("Échec d'authentification ou token corrompu :", e);
+        // En cas de tentative de bypass / token invalide : nettoyage et expulsion
+        localStorage.clear();
+        window.location.href = "/ui/login";
     }
 }
 
