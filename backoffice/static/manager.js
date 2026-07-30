@@ -316,4 +316,21 @@ document.getElementById("new-stock-form")?.addEventListener("submit", async (eve
   qtyInput.value = "1";
 });
 
-document.addEventListener("DOMContentLoaded", init);
+
+// Configuration de l'URL du Client Web Agent IA
+function setupClientWebLink() {
+  const aiLink = document.getElementById("ai-agent-link");
+  if (!aiLink) return;
+
+  // Récupère l'hôte actuel (localhost ou IP/nom de domaine) et le port configurable
+  const host = window.WEB_CLIENT_HOST || window.location.hostname || "localhost";
+  const port = window.WEB_CLIENT_PORT || "8080";
+  const protocol = window.location.protocol || "http:";
+
+  aiLink.href = `${protocol}//${host}:${port}/index.html`;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  setupClientWebLink();
+  init();
+});
