@@ -139,6 +139,7 @@ services:
       #   "Google Application Default Credentials" so warns it fallbacks on "local".
       # Others during run because it has features still in "experimental stage".
       - PYTHONWARNINGS=ignore
+      - PYTHONUNBUFFERED=1
     depends_on:
       - mcp-server
     restart: unless-stopped
