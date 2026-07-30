@@ -303,7 +303,7 @@ async def get_products_for_branch(branch_id: int) -> list[dict]:
 
 
 @mcp.resource("inventory://catalog-summary")
-async function get_full_catalog_inventory_resource() -> str:
+async def get_full_catalog_inventory_resource() -> str:
     """
     Ressource MCP qui agrège le catalogue produit complet avec les quantités 
     en stock consolidées pour toutes les branches.
