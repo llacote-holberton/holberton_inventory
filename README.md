@@ -40,8 +40,6 @@
 
 ## How to install and run
 
-FIXME
-
 <details>
 <summary>(Click for detailed information on prerequisites, download and installation/configuration/run steps)</b></summary>
 
@@ -86,10 +84,66 @@ sudo usermod -aG docker $USER
 # Note: Log out and log back in for the group membership change to take effect.
 ```
 
-### 2. Compiling / Configuring
+### 2. Configuring and running
 
-FIXME
+Hbntory uses Docker Compose to orchestrate all microservices. Configuration is driven entirely through environment variables defined in a `.env` file at the root of the repository.
 
+---
+
+#### Step 1: Environment Configuration (one-shot)
+
+Copy the provided `.env.example` file to create your local `.env` configuration:
+
+```bash
+cp .env.example .env
+# If you want to edit in command line with vim
+vim .env
+```
+Open with your favorite GUI text editor and adjusted the required values.
+
+##### WARNING about CRITICAL CONFIGURATION VALUES
+Before launching the stack, you must update the following placeholder values in your .env file:
+- DB_ROOT_PASSWORD & DB_HBNTORY_USER_PWD: change these from the default placeholders to secure passwords.
+- INTERNAL_API_KEY: security key used by the MCP Server to communicate with the Backoffice API.
+  You can generate a secure random string using Python if you have it installed:  
+  `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`
+- JWT_SECRET: used by the Backoffice API to sign authentication tokens.
+  Generate a unique secret string using the same command above.
+- LLA_MODEL_NAME: provide here a "machine name" for the desired model (confer Annex 1 for more information) FIXME change .env.example value for ollama/llama3.
+- LLM_MODEL_API_KEY: provide your API key for the configured LLM provider
+
+For more information on LLM configuration specifically, please confer the Annex 1: choosing your LLM model (FIXME ADD ANNEX either inline at document end or as a separate document in docs.).
+
+
+# Step 2: Managing the environment (repeatable)
+
+NOTE: all the following commands expect you to run them from the project's root so the 'compose' command automatically finds the related docker-compose.yml file.
+Otherwise you will need to specify the path to the compose file.
+
+## Starting
+To build all container images and start all microservices, run:
+`docker compose up -d --build`
+
+What does it do?
+- docker: name of the "containarization tool" which allows you to create and run apps and operating systems in a total isolation.
+- compose: one of the first level commands of docker: instructs it to find file(s) with specific name(s) in current filetree and parse them to get a series of instructions to create several "containers" lumped together. Here it will automatically target the "docker-compose.yml"
+- '--build': forces the composition process to double-check the files which define how each container should be created, and (re)create them if need be.
+- '-d': means "detached mode", aka the compose process will tell you about what it is doing on the terminal while working but when finished will "give terminal back to you". Without this option, the terminal would be "locked" to show runtime information. Which is a mode usually kept for debugging.
+
+## Monitoring
+
+You can check the status of all running containers at any time with:
+`docker compose ps` (ps standing for "process status")
+You can also check the logs of the containers by doing the following command, with or without a service name as parameter.
+`docker compose logs <optional:name-of-service-as-defined-in-compose-file>`
+
+## Stopping
+To stop the stack without losing any information, just run this.
+`docker compose down`.
+
+## Deleting all information (containers AND database)
+
+If you want to completely and cleanly uninstall this project (or just restart it from scratch), you can simply do `docker compose down -v`. The -v option means "Volume deletion" and implies that the persistent storage for database will be deleted from your machine.
 
 </details>
 
