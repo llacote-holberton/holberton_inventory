@@ -301,6 +301,120 @@ async def get_products_for_branch(branch_id: int) -> list[dict]:
         )
     return resp.json()
 
+
+@mcp.resource("inventory://catalog-summary")
+async def get_full_catalog_inventory_resource() -> str:
+    """
+    Ressource MCP qui agrège le catalogue produit complet avec les quantités 
+    en stock consolidées pour toutes les branches.
+    """
+    import json
+    
+    # 1. Récupérer tous les produits
+    async with httpx.AsyncClient(timeout=10) as client:
+        prod_resp = await client.get(f"{PRODUCTS_API_URL}/api/v1/products?limit=250")
+        products = prod_resp.json()
+        if isinstance(products, dict):
+            products = products.get("items", products.get("results", []))
+
+        # 2. Récupérer toutes les branches
+        branches_resp = await client.get(
+            f"{INTERNAL_API_URL}/internal/branches/list",
+            headers={"X-API-KEY": INTERNAL_API_KEY}
+        )
+        branches = branches_resp.json() if branches_resp.status_code == 200 else []
+
+    # 3. Fusionner les données dans une structure propre pour le LLM
+    catalog_summary = []
+    for p in products:
+        catalog_summary.append({
+            "product_id": p["id"],
+            "sku": p["sku"],
+            "name": p["name"],
+            "category": p.get("category"),
+            "discontinued": p.get("discontinued", False),
+            "unit_price": p.get("unit_price")
+        })
+
+    return json.dumps({
+        "total_products": len(catalog_summary),
+        "branches_count": len(branches),
+        "catalog": catalog_summary
+    }, ensure_ascii=False, indent=2)
+
+
+import asyncio
+
+@mcp.tool()
+async def get_all_branch_stocks() -> list[dict]:
+    """
+    Récupère la liste de TOUS les stocks ventilés par branche pour l'ensemble du réseau,
+    enrichie directement avec le nom et le SKU de chaque produit.
+    À utiliser lorsque l'utilisateur demande une vue globale des stocks, un récapitulatif 
+    général, ou la liste des stocks pour toutes les branches.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            # 1. Récupération robuste du catalogue produits
+            product_map = {}
+            try:
+                prod_resp = await client.get(f"{PRODUCTS_API_URL}/api/v1/products?limit=250")
+                if prod_resp.status_code == 200:
+                    data = prod_resp.json()
+                    raw = data.get("items", data) if isinstance(data, dict) else data
+                    if isinstance(raw, list):
+                        product_map = {p["id"]: p for p in raw if isinstance(p, dict) and "id" in p}
+            except Exception as err:
+                print(f"[MCP WARNING] Impossible de pré-charger le catalogue: {err}", flush=True)
+
+            # 2. Récupération de la liste des branches
+            branches_resp = await client.get(
+                f"{INTERNAL_API_URL}/internal/branches/list",
+                headers={"X-API-KEY": INTERNAL_API_KEY},
+            )
+            if branches_resp.status_code >= 400:
+                return [{"error": f"Erreur API branches HTTP {branches_resp.status_code}"}]
+
+            branches = branches_resp.json()
+            if not isinstance(branches, list):
+                return [{"error": "Format de branches invalide"}]
+
+            # 3. Fonction d'extraction et d'enrichissement pour une branche
+            async def fetch_branch_stock(b):
+                b_id = b.get("id")
+                b_label = b.get("label", f"Branche #{b_id}")
+                try:
+                    res = await client.get(
+                        f"{INTERNAL_API_URL}/internal/branches/{b_id}/stocks",
+                        headers={"X-API-KEY": INTERNAL_API_KEY},
+                    )
+                    if res.status_code == 200:
+                        raw_stocks = res.json()
+                        enriched = []
+                        for s in raw_stocks:
+                            p_id = s.get("product_id")
+                            p_info = product_map.get(p_id, {})
+                            enriched.append({
+                                "product_id": p_id,
+                                "sku": p_info.get("sku", "N/A"),
+                                "name": p_info.get("name", f"Produit #{p_id}"),
+                                "quantity": s.get("quantity", 0)
+                            })
+                        return {"branch_id": b_id, "branch_name": b_label, "stocks": enriched}
+                except Exception as err:
+                    print(f"[MCP ERROR] Erreur branche {b_id}: {err}", flush=True)
+                
+                return {"branch_id": b_id, "branch_name": b_label, "stocks": []}
+
+            # 4. Exécution parallèle de toutes les requêtes de branches
+            results = await asyncio.gather(*(fetch_branch_stock(b) for b in branches))
+            return list(results)
+
+    except Exception as exc:
+        print(f"[MCP CRITICAL] Crash get_all_branch_stocks: {exc}", flush=True)
+        return [{"error": f"Erreur interne du service MCP: {str(exc)}"}]
+
+
 if __name__ == "__main__":
     # transport HTTP car ce service tourne dans son propre conteneur Docker,
     # séparé du service ai_service qui va s'y connecter par le réseau.

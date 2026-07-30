@@ -1,15 +1,16 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from auth import verify_password, create_access_token
+from auth import hash_password, verify_password, create_access_token
 from auth import get_jwt_payload, require_manager, require_admin
 from auth import require_admin_or_manager
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from database import get_db
 import crud
 from api_models import LoginRequest
 from api_models import BranchOut, StockOut
+from api_models import UserOut, UserCreate
 
 
 app = FastAPI(title="Hbntory Backoffice")
@@ -37,7 +38,6 @@ def whoami(current_user: dict = Depends(get_jwt_payload)):
 
 
 # =============== USERS RELATED ROUTES ===============
-from api_models import UserOut
 @app.get("/users", response_model=list[UserOut])
 def list_users_route(db: Session = Depends(get_db),
                      is_admin: dict = Depends(require_admin)):
@@ -102,6 +102,33 @@ def reassign_branch_route(
     if not success:
         raise HTTPException(status_code=404, detail="user_not_found_or_not_manager")
     return {"user_id": user_id, "branch_id": payload.branch_id}
+
+
+@app.post("/users", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+def create_user_route(
+    payload: UserCreate,
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(require_admin) # Vérifie l'authentification Admin
+):
+    # Vérification d'unicité du nom
+    if crud.get_user_by_name(db, user_name=payload.name):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Un utilisateur avec ce nom existe déjà."
+        )
+
+    # Hash du mot de passe avant insertion
+    hashed_pwd = hash_password(payload.password)
+
+    # Création via le CRUD
+    new_user = crud.create_user(
+        db=db,
+        user_name=payload.name,
+        pwd_hash=hashed_pwd,
+        role=payload.role,
+        branch_id=payload.branch_id
+    )
+    return new_user
 
 
 # =============== BRANCHES RELATED ROUTES ===============
@@ -175,23 +202,13 @@ def get_branch_stocks_route(
 # Will be hoisted back to top during "code cleaning phase".
 from api_models import StockAddIn
 @app.post("/branches/{branch_id}/stock/add", response_model=StockOut)
-def add_stock_route(
+async def add_stock_route(  # Needs to be made async to allow SSE
     branch_id: int,
-    # Instead of plain json and manual validation in body...
-    # product_id: int,
-    # amount: int,
-    # It's simpler and more robust to delegate to a Pydantic model
     payload: StockAddIn,
     db: Session = Depends(get_db),
     manager: dict = Depends(require_manager),
 ):
     m_id = manager.get("branch_id")
-    # NOTE: attempt to convert m_id to int not done immediately
-    #   to avoid an early 500 -> 422 Response if not convertable.
-    # No need to convert branch_id either, already done by Pydantic.
-    #   Only risk is value in JWT being incompatible (ex "hello")
-    #   but since it comes from our own app we consider the "risk"
-    #     is acceptable.
     if m_id is None or int(m_id) != branch_id:
         raise HTTPException(
             status_code=403,
@@ -204,12 +221,16 @@ def add_stock_route(
         branch_id=branch_id,
         amount=payload.amount
     )
+
+    # Adding an "update event" push as SSE
+    await notifier.notify(branch_id=branch_id, product_id=payload.product_id, quantity=new_quantity)
+
     return {"branch_id": branch_id, "product_id": payload.product_id, "quantity": new_quantity}
 
 
 from api_models import StockRemoveIn
 @app.post("/branches/{branch_id}/stock/remove", response_model=StockOut)
-def remove_stock_route(
+async def remove_stock_route(  # 👈 'async def' indispensable pour 'await'
     branch_id: int,
     payload: StockRemoveIn,
     db: Session = Depends(get_db),
@@ -230,18 +251,90 @@ def remove_stock_route(
             product_id=p_id,
             amount=payload.amount
         )
-    # Row exists but not enough stock to substract without going below 0.
     except crud.InsufficientStockError as exc:
         insufficient_msg = (
             f"Insufficient stock: tried to substract {payload.amount}."
             f" But only {exc.available} available!"
         )
         raise HTTPException(status_code=400, detail=insufficient_msg)
-    # Row didn't exist.
+
     if new_quantity is None:
         nostock_msg = f"No stock found in branch {branch_id} for product {p_id}"
         raise HTTPException(status_code=404, detail=nostock_msg)
-    # Everything went well.
+
+    # Adding an "update event" push as SSE
+    await notifier.notify(branch_id=branch_id, product_id=p_id, quantity=new_quantity)
+
     return {"branch_id": branch_id, "product_id": p_id, "quantity": new_quantity}
 
 
+import asyncio
+import json
+from collections import defaultdict
+from fastapi.responses import StreamingResponse
+
+class StockNotifier:
+    def __init__(self):
+        # Creates a dictionary of queues, id being branch_id, 
+        #   on item per browser tab connected
+        self.listeners: dict[int, set[asyncio.Queue]] = defaultdict(set)
+
+    async def subscribe(self, branch_id: int):
+        queue = asyncio.Queue()
+        self.listeners[branch_id].add(queue)
+        try:
+            while True:
+                # Attend un nouvel événement de stock
+                data = await queue.get()
+                yield f"data: {data}\n\n"
+        except asyncio.CancelledError:
+            # Nettoyage à la déconnexion du client
+            self.listeners[branch_id].remove(queue)
+
+    async def notify(self, branch_id: int, product_id: int, quantity: int):
+        payload = json.dumps({"product_id": product_id, "quantity": quantity})
+        for queue in list(self.listeners[branch_id]):
+            await queue.put(payload)
+
+notifier = StockNotifier()
+
+# Route SSE pour écouter les changements de stock d'une branche
+@app.get("/branches/{branch_id}/stocks/stream")
+async def stream_branch_stocks(branch_id: int):
+    return StreamingResponse(
+        notifier.subscribe(branch_id),
+        media_type="text/event-stream"
+    )
+
+
+# =============== BACKOFFICE UI - Static pages ===============
+
+# New imports for static files serving.
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+# Retrieving "true local path contextually" to cover both
+#   "from host" and "in docker container" cases.
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+
+# Unique mount for everything
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+# Routes d'affichage des pages
+@app.get("/")
+@app.get("/login")
+@app.get("/ui/login")
+def serve_login():
+    return FileResponse(STATIC_DIR / "login.html")
+
+
+@app.get("/ui/admin")
+def serve_admin():
+    return FileResponse(STATIC_DIR / "admin.html")
+
+
+@app.get("/ui/manager")
+def serve_manager():
+    return FileResponse(STATIC_DIR / "manager.html")
