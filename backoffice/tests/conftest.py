@@ -26,7 +26,8 @@ load_dotenv(root_dir / ".env")
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import sessionmaker
 
@@ -52,6 +53,12 @@ engine = create_engine(
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
+# NOTE: explicitely enabling "Enforce Foreign Keys constraints" in SQLite
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
 TestSessionLocal = sessionmaker(bind=engine)
 
 

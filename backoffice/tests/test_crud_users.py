@@ -44,19 +44,46 @@ def test_create_user_success(db):
     assert user.branch_id is None
 
 
-def test_create_user_with_admin_role_and_branch(db, sample_branch):
-    """Verifies creating an admin user assigned to a branch."""
+def test_create_admin_user_always_forces_no_branch(db, sample_branch):
+    """Verifies creating an admin user forces branch_id to None (business rule)."""
     admin = create_user(
         db,
         user_name="admin_bob",
         pwd_hash="admin_hash",
         role=UserRole.ADMIN,
-        branch_id=sample_branch.id
+        branch_id=sample_branch.id  # Devrait être ignoré par la règle métier
     )
 
     assert admin.id is not None
     assert admin.role == UserRole.ADMIN
-    assert admin.branch_id == sample_branch.id
+    assert admin.branch_id is None
+
+
+def test_create_manager_with_valid_branch(db, sample_branch):
+    """Verifies creating a manager user directly assigned to a valid branch."""
+    manager = create_user(
+        db,
+        user_name="manager_charlie",
+        pwd_hash="mgr_hash",
+        role=UserRole.MANAGER,
+        branch_id=sample_branch.id
+    )
+
+    assert manager.id is not None
+    assert manager.role == UserRole.MANAGER
+    assert manager.branch_id == sample_branch.id
+
+
+def test_create_manager_invalid_branch_raises_integrity_error(db):
+    """Verifies creating a user with a non-existent branch_id raises IntegrityError."""
+    with pytest.raises(IntegrityError):
+        create_user(
+            db,
+            user_name="bad_branch_user",
+            pwd_hash="hash",
+            role=UserRole.MANAGER,
+            branch_id=99999
+        )
 
 
 def test_create_user_duplicate_name_raises_integrity_error(db):
@@ -118,6 +145,14 @@ def test_assign_branch_manager_only(db, sample_branch):
     db.refresh(admin)
     assert success_adm is False
     assert admin.branch_id is None
+
+
+def test_assign_branch_invalid_branch_id_raises_integrity_error(db, sample_branch):
+    """Verifies assigning a non-existent branch_id raises IntegrityError."""
+    manager = create_user(db, user_name="mgr_invalid_b", pwd_hash="hash", role=UserRole.MANAGER)
+
+    with pytest.raises(IntegrityError):
+        assign_branch(db, user_id=manager.id, branch_id=99999)
 
 
 def test_unassign_branch_from_manager(db, sample_branch):

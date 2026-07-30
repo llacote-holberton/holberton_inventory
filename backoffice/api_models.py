@@ -55,6 +55,14 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class UserCreate(BaseModel):
+    """Payload de création d'un utilisateur depuis le Backoffice"""
+    name: str
+    password: str = Field(min_length=4, max_length=72)
+    role: UserRole = UserRole.MANAGER
+    branch_id: int | None = None
+
+
 class PasswordReset(BaseModel):
     """Just a Data Transfert Object to ease up new password retrieval"""
     # new_password: str  # Not secure enough to my taste (would accept "")

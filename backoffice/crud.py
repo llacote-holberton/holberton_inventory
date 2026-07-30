@@ -131,6 +131,9 @@ def create_user(
     db: Session, user_name: str, pwd_hash: str,
     role: UserRole = UserRole.MANAGER, branch_id: int | None = None
 ) -> User:
+    # Business rule: an Admin must not be associated with a branch
+    if role == UserRole.ADMIN:
+        branch_id = None
     new_user = User(
         name=user_name,
         password_hash=pwd_hash,
@@ -162,7 +165,8 @@ def reset_user_password(db: Session, *, user_id: int, password_hash: str) -> boo
     return result.rowcount > 0
 
 
-def assign_branch(db: Session, *, user_id: int, branch_id: int) -> bool:
+from typing import Optional  # Import specific to this method
+def assign_branch(db: Session, *, user_id: int, branch_id: int | None = None) -> bool:
     """Changes the branch a user is associated with IF user is Manager"""
     result = db.execute(
         update(User)

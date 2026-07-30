@@ -1,15 +1,16 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from auth import verify_password, create_access_token
+from auth import hash_password, verify_password, create_access_token
 from auth import get_jwt_payload, require_manager, require_admin
 from auth import require_admin_or_manager
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from database import get_db
 import crud
 from api_models import LoginRequest
 from api_models import BranchOut, StockOut
+from api_models import UserOut, UserCreate
 
 
 app = FastAPI(title="Hbntory Backoffice")
@@ -37,7 +38,6 @@ def whoami(current_user: dict = Depends(get_jwt_payload)):
 
 
 # =============== USERS RELATED ROUTES ===============
-from api_models import UserOut
 @app.get("/users", response_model=list[UserOut])
 def list_users_route(db: Session = Depends(get_db),
                      is_admin: dict = Depends(require_admin)):
@@ -102,6 +102,33 @@ def reassign_branch_route(
     if not success:
         raise HTTPException(status_code=404, detail="user_not_found_or_not_manager")
     return {"user_id": user_id, "branch_id": payload.branch_id}
+
+
+@app.post("/users", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+def create_user_route(
+    payload: UserCreate,
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(require_admin) # Vérifie l'authentification Admin
+):
+    # Vérification d'unicité du nom
+    if crud.get_user_by_name(db, user_name=payload.name):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Un utilisateur avec ce nom existe déjà."
+        )
+
+    # Hash du mot de passe avant insertion
+    hashed_pwd = hash_password(payload.password)
+
+    # Création via le CRUD
+    new_user = crud.create_user(
+        db=db,
+        user_name=payload.name,
+        pwd_hash=hashed_pwd,
+        role=payload.role,
+        branch_id=payload.branch_id
+    )
+    return new_user
 
 
 # =============== BRANCHES RELATED ROUTES ===============
