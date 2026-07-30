@@ -94,3 +94,180 @@ Here is the list of fallback defaults
 | AI Agent                        | 8003:8003                      |
 | Web client                      | 8080:8080                      |
 
+
+## Sequence diagrams
+
+As all interactions for each interface follow the same process, for Admin interface and Manager interface only one example will be represented in the diagram.
+
+### Admin role operations from UX
+
+<details>
+<summary>Example given: create a user</summary>
+
+```
+
++---------------------+           +------------------------+           +----------------------+
+|  Admin Browser UI   |           | Backoffice (FastAPI)   |           |  stocks-db (MariaDB) |
+|   (Port 8080/8000)  |           |      (Port 8000)       |           |     (Port 3306)      |
++---------------------+           +------------------------+           +----------------------+
+           |                                   |                                   |
+           | 1. Click on "Créer l'utilisateur" |                                   |
+           |    (Event Listener submit)        |                                   |
+           |------------------------------->   |                                   |
+           |    HTTP POST /users               |                                   |
+           |    Headers: Authorization Bearer  |                                   |
+           |    Payload: {username, role...}   |                                   |
+           |                                   |                                   |
+           |                                   | 2. Valid. JWT & Admin Role        |
+           |                                   |-----------------------+           |
+           |                                   |                       |           |
+           |                                   |<----------------------+           |
+           |                                   |                                   |
+           |                                   | 3. Hashing password               |
+           |                                   |    (passlib / bcrypt)             |
+           |                                   |-----------------------+           |
+           |                                   |                       |           |
+           |                                   |<----------------------+           |
+           |                                   |                                   |
+           |                                   | 4. SQL Request (SQLAlchemy)       |
+           |                                   |    INSERT INTO users (...)        |
+           |                                   |---------------------------------->|
+           |                                   |                                   |
+           |                                   | 5. Validating write & getting ID  |
+           |                                   |    SQL OK (Commit)                |
+           |                                   |<----------------------------------|
+           |                                   |                                   |
+           | 6. Response HTTP 201 Created      |                                   |
+           |    Payload: UserOut Schema (JSON) |                                   |
+           |<----------------------------------|                                   |
+           |                                   |                                   |
+           | 7. DOM update to add new row      |                                   |
+           |    (Form reset + toast notif      |                                   |
+           |    + list refresh)                |                                   |
+           |-----------------------+           |                                   |
+           |                       |           |                                   |
+           |<----------------------+           |                                   |
+
+```
+
+</details>
+
+### Manager role operations from UX
+
+Given example to show Server-Sent Events: adding amount to an existing stock (triggering a SSE to update listing for others Managers of the same branch currently connected.)
+
+<details><summary>Add amount to existing stock</summary>
+
+```
+
++--------------------+      +----------------------+      +--------------------+      +-----------------------+
+|     Manager UI     |      | Backoffice (FastAPI) |      | stocks-db(MariaDB) |      | Connected Clients UI  |
+|  (Port 8080/8000)  |      |     (Port 8000)      |      |    (Port 3306)     |      |   (SSE Listeners)     |
++--------------------+      +----------------------+      +--------------------+      +-----------------------+
+          |                            |                            |                             |
+          | 1. Click "Add Stock"       |                            |                             |
+          |    HTTP POST /stocks       |                            |                             |
+          |    Header: Bearer <JWT>    |                            |                             |
+          |--------------------------->|                            |                             |
+          |                            |                            |                             |
+          |                            | 2. Validate JWT & Role     |                             |
+          |                            |    Ensure Branch Scope OK  |                             |
+          |                            |-----------------------+    |                             |
+          |                            |                       |    |                             |
+          |                            |<----------------------+    |                             |
+          |                            |                            |                             |
+          |                            | 3. SQL Query (SQLAlchemy)  |                             |
+          |                            |    UPDATE/INSERT stock     |                             |
+          |                            |--------------------------->|                             |
+          |                            |                            |                             |
+          |                            | 4. DB Commit Success       |                             |
+          |                            |<---------------------------|                             |
+          |                            |                            |                             |
+          |                            | 5. Publish to asyncio      |                             |
+          |                            |    Queue (SSE Broadcaster) |                             |
+          |                            |-----------------------+    |                             |
+          |                            |                       |    |                             |
+          |                            |<----------------------+    |                             |
+          |                            |                            |                             |
+          | 6. HTTP 200 OK Response    |                            |                             |
+          |    Payload: Updated Stock  |                            |                             |
+          |<---------------------------|                            |                             |
+          |                            |                            |                             |
+          |                            | 7. Stream event over SSE   |                             |
+          |                            |    event: stock_update     |                             |
+          |                            |    data: {"branch_id"...}  |                             |
+          |                            |--------------------------------------------------------->|
+          |                            |                            |                             |
+          | 8. Update UI               |                            |                             | 8. Update Live UI
+          |    (Reset form & toast)    |                            |                             |    (Highlight row/qty)
+          |--------------------+       |                            |                             |-----------------------+
+          |                    |       |                            |                             |                       |
+          |<-------------------+       |                            |                             |<----------------------+
+
+```
+
+</details>
+
+### Web client
+
+<details><summary>Ask something about stocks/products</summary>
+
+```
+
++-------------------+      +------------------+      +--------------------+      +-----------------------+      +------------------+
+|   Web Client UI   |      |    AI Service    |      |     MCP Server     |      |  Products / Internal  |      |    stocks-db     |
+|    (Port 8080)    |      |   (Port 8003)    |      |    (Port 8001)     |      |  APIs (8002 / 5000)   |      |   (Port 3306)    |
++-------------------+      +------------------+      +--------------------+      +-----------------------+      +------------------+
+          |                         |                          |                         |                             |
+          | 1. Submit Prompt        |                          |                         |                             |
+          |    "Stock for Toulouse?"|                          |                         |                             |
+          |    HTTP POST /chat      |                          |                         |                             |
+          |------------------------>|                          |                         |                             |
+          |                         |                          |                         |                             |
+          |                         | 2. Query LLM Engine      |                         |                             |
+          |                         |    (LiteLLM / Google ADK)|                         |                             |
+          |                         |-----[LLM Request]----->  |                         |                             |
+          |                         |<----[Tool Call Requested]|                         |                             |
+          |                         |                          |                         |                             |
+          |                         | 3. Execute MCP Tool      |                         |                             |
+          |                         |    `get_stock(branch)`   |                         |                             |
+          |                         |------------------------->|                         |                             |
+          |                         |                          |                         |                             |
+          |                         |                          | 4. Resolve SKU / ID     |                             |
+          |                         |                          |    HTTP GET /products   |                             |
+          |                         |                          |------------------------>|                             |
+          |                         |                          |<------------------------|                             |
+          |                         |                          |                         |                             |
+          |                         |                          | 5. Fetch Stock Records  |                             |
+          |                         |                          |    HTTP GET /stocks     |                             |
+          |                         |                          |    Header: X-API-KEY    |                             |
+          |                         |                          |------------------------>|                             |
+          |                         |                          |                         | 6. SQL Query (SQLAlchemy)   |
+          |                         |                          |                         |    SELECT stock BY branch   |
+          |                         |                          |                         |---------------------------->|
+          |                         |                          |                         |                             |
+          |                         |                          |                         | 7. Return Raw Stock Data    |
+          |                         |                          |                         |<----------------------------|
+          |                         |                          |<------------------------|                             |
+          |                         |                          |                         |                             |
+          |                         | 8. Structured Tool Output|                         |                             |
+          |                         |<-------------------------|                         |                             |
+          |                         |                          |                         |                             |
+          |                         | 9. Send Tool Results     |                         |                             |
+          |                         |    to LLM for synthesis  |                         |                             |
+          |                         |-----[LLM Synthesis]--->  |                         |                             |
+          |                         |<----[Natural Response]-- |                         |                             |
+          |                         |                          |                         |                             |
+          | 10. HTTP 200 OK Response|                          |                         |                             |
+          |     Payload: {answer}   |                          |                         |                             |
+          |<------------------------|                          |                         |                             |
+          |                         |                          |                         |                             |
+          | 11. Render Chat Reply   |                          |                         |                             |
+          |     (DOM Append & Scroll|                          |                         |                             |
+          |-------------------+     |                          |                         |                             |
+          |                   |     |                          |                         |                             |
+          |<------------------+     |                          |                         |                             |
+
+```
+
+</details>
