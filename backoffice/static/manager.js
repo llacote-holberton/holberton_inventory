@@ -3,6 +3,7 @@
  */
 
 let userBranchId = null;
+const catalogMap = new Map();
 let stockData = [];
 const stockListEl = document.getElementById("stock-list");
 
@@ -127,6 +128,19 @@ function customAlert(message, title = "Information") {
 }
 
 
+async function loadFullCatalog() {
+  try {
+    const response = await fetch(`${PRODUCTS_API_URL}/api/v1/products?limit=200`);
+    if (response.ok) {
+      const data = await response.json();
+      const items = data.items || data.results || data;
+      items.forEach((prod) => catalogMap.set(prod.id, prod));
+    }
+  } catch (err) {
+    console.warn("Impossible de précharger le catalogue complet:", err);
+  }
+}
+
 
 
 // 3. Récupération des détails d'un produit par ID (Port 5000)
@@ -194,31 +208,31 @@ async function loadStock() {
   if (!userBranchId) return;
 
   try {
-    const response = await apiFetch(`/branches/${userBranchId}/stocks`);
-    if (!response || !response.ok) {
-      throw new Error(`Statut HTTP ${response?.status}`);
+    // 1. Charger le catalogue global si la map est vide
+    if (catalogMap.size === 0) {
+      await loadFullCatalog();
     }
+
+    // 2. Récupérer les stocks de la branche
+    const response = await apiFetch(`/branches/${userBranchId}/stocks`);
+    if (!response || !response.ok) throw new Error(`HTTP ${response?.status}`);
 
     stockData = await response.json();
 
-    await Promise.all(
-      stockData.map(async (item) => {
-        const info = await getProductInfo(item.product_id);
-        if (info) {
-          item.name = info.name || info.label || info.title;
-          item.sku = info.sku;
-          item.category = info.category;
-          item.supplier_name = info.supplier_name || info.supplier || info.brand;
-        }
-      })
-    );
+    // 3. Enrichissement instantané en mémoire (O(1), 0 requête HTTP supplémentaire !)
+    stockData.forEach((item) => {
+      const info = catalogMap.get(item.product_id);
+      if (info) {
+        item.name = info.name;
+        item.sku = info.sku;
+        item.category = info.category;
+        item.supplier_name = info.supplier_name || info.brand;
+      }
+    });
 
     renderStock();
   } catch (error) {
     console.error("Erreur de chargement des stocks:", error);
-    if (stockListEl) {
-      stockListEl.innerHTML = `<p class="placeholder">Erreur lors du chargement des stocks.</p>`;
-    }
   }
 }
 
