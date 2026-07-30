@@ -32,10 +32,14 @@ function branchName(branchId) {
 }
 
 function renderBranchSelect() {
-  userBranchSelect.innerHTML = branches
+  const selectEl = document.getElementById("user-branch");
+  if (!selectEl) return;
+
+  selectEl.innerHTML = branches
     .map((b) => `<option value="${b.id}">${b.name}</option>`)
     .join("");
 }
+
 
 function renderBranches() {
   if (!branchListEl) return;
@@ -135,12 +139,24 @@ function deleteBranch(branchId) {
 }
 */
 
-function createUser(username, password, branchId) {
-  // TODO : POST vers USER_API_URL avec { username, password, branch_id }.
-  // Le mot de passe ne doit JAMAIS être stocké/affiché en clair côté
-  // Backoffice : le hashage se fait côté serveur, jamais dans ce JS.
-  users.push({ id: nextUserId++, username, branch_id: branchId, active: true });
-  renderUsers();
+async function createUser(name, password, branchId) {
+  const res = await apiFetch("/users", {
+    method: "POST",
+    body: JSON.stringify({
+      name: name,          // Ou "username" selon ce qu'attend ton schéma Pydantic en entrée
+      password: password,
+      branch_id: branchId,
+      role: "manager"      // Les utilisateurs créés depuis le backoffice sont des managers
+    })
+  });
+
+  if (res && res.ok) {
+    alert("Manager créé avec succès !");
+    loadData(); // Recharge la liste pour afficher le nouvel utilisateur
+  } else {
+    const err = await res.json().catch(() => ({}));
+    alert("Erreur lors de la création : " + (err.detail || "Vérifiez les données saissies."));
+  }
 }
 
 async function changeUserBranch(userId, newBranchId, oldBranchId) {
@@ -227,15 +243,25 @@ document.getElementById("branch-form").addEventListener("submit", (event) => {
   input.value = "";
 });
 
-document.getElementById("user-form").addEventListener("submit", (event) => {
+document.getElementById("user-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
+
   const usernameInput = document.getElementById("user-username");
   const passwordInput = document.getElementById("user-password");
+  const branchSelect = document.getElementById("user-branch");
+
   const username = usernameInput.value.trim();
   const password = passwordInput.value;
-  const branchId = parseInt(userBranchSelect.value, 10);
-  if (!username || !password || !branchId) return;
-  createUser(username, password, branchId);
+  const branchId = parseInt(branchSelect.value, 10);
+
+  if (!username || !password || !branchId) {
+    alert("Veuillez remplir tous les champs.");
+    return;
+  }
+
+  await createUser(username, password, branchId);
+
+  // Reinitialisation des champs après création
   usernameInput.value = "";
   passwordInput.value = "";
 });
