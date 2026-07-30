@@ -40,7 +40,7 @@ async function init() {
   userBranchId = userData.branch_id;
 
   if (!userBranchId) {
-    alert("Erreur : Aucun identifiant de branche associé à ce compte manager.");
+    customAlert("Erreur : Aucun identifiant de branche associé à ce compte manager.");
     return;
   }
 
@@ -94,6 +94,40 @@ async function apiFetch(url, options = {}) {
 
   return response;
 }
+
+// 2bis alert helper
+function customAlert(message, title = "Information") {
+  let overlay = document.getElementById("custom-modal-overlay");
+
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "custom-modal-overlay";
+    overlay.className = "modal-overlay";
+    overlay.innerHTML = `
+      <div class="modal-box">
+        <h3 class="modal-title" id="custom-modal-title"></h3>
+        <div class="modal-body" id="custom-modal-message"></div>
+        <div class="modal-actions">
+          <button class="modal-btn" id="custom-modal-close" type="button">Compris</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const closeBtn = overlay.querySelector("#custom-modal-close");
+    closeBtn.addEventListener("click", () => overlay.classList.remove("active"));
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) overlay.classList.remove("active");
+    });
+  }
+
+  document.getElementById("custom-modal-title").textContent = title;
+  document.getElementById("custom-modal-message").textContent = message;
+  overlay.classList.add("active");
+}
+
+
+
 
 // 3. Récupération des détails d'un produit par ID (Port 5000)
 async function getProductInfo(productId) {
@@ -257,7 +291,7 @@ async function addStock(productId, amount) {
     await loadStock();
   } else {
     const err = await response.json();
-    alert(`Erreur : ${err.detail || "Impossible d'ajouter le stock."}`);
+    customAlert(`Erreur : ${err.detail || "Impossible d'ajouter le stock."}`);
   }
 }
 
@@ -276,7 +310,7 @@ async function removeStock(productId, amount) {
     await loadStock();
   } else {
     const err = await response.json();
-    alert(`Erreur : ${err.detail || "Impossible de retirer le stock."}`);
+    customAlert(`Erreur : ${err.detail || "Impossible de retirer le stock."}`);
   }
 }
 
@@ -290,7 +324,7 @@ document.getElementById("new-stock-form")?.addEventListener("submit", async (eve
   const quantity = parseInt(qtyInput.value, 10);
 
   if (!query || !quantity || quantity <= 0) {
-    alert("Veuillez saisir un identifiant/SKU valide et une quantité strictement positive.");
+    customAlert("Veuillez saisir un identifiant/SKU valide et une quantité strictement positive.");
     return;
   }
 
@@ -299,13 +333,13 @@ document.getElementById("new-stock-form")?.addEventListener("submit", async (eve
 
   // Point 2 : Le produit n'existe pas
   if (!product) {
-    alert("Ce produit n'existe pas");
+    customAlert("Ce produit n'existe pas");
     return;
   }
 
   // Point 3 : Le produit est discontinued
   if (product.discontinued) {
-    alert("ce produit ne fait plus partie de notre catalogue il est conservé comme référence pour d'anciennes commandes");
+    customAlert("ce produit ne fait plus partie de notre catalogue il est conservé comme référence pour d'anciennes commandes");
     return;
   }
 
