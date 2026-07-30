@@ -4,7 +4,7 @@ This document aims at providing more in-depth information on how (and why) the a
 
 ## Data management
 
-### Stocks, Users and Branches
+### Models: Stocks, Users and Branches
 
 As the business requirements imposed to use a "product catalog" provided by an external API, we had the strict constraint of not storing anything else than the Product ID in our database.
 Alongside, the business rules implicitely put out of scope the management of branches themselves (creating/deleting it).
@@ -48,6 +48,22 @@ As such actual exploitation of data requires assembly of product id and its deta
 
 Currently the assembly is done in two functional spaces, the Backoffice and the MCP server, as we needed to parallelize to implement features as quickly as possible.
 In a v2 it would be probably refactored so that the Backoffice prepares once and for all the products catalog (since it needs it anyways for Managers to add/remove stocks) and expose it on a single API endpoint (with support for batching request and filters to avoid useless load).
+
+
+### Setup and auto-fill: the "MariaDB init seeds approach"
+
+As we wanted our app to be usable immediately for both ongoing development and demonstration purpose we needed to ensure that the MariaDB handler would already have the database created with tables setup and already filled with some data.
+
+To implement this we had two main ways: using the builtin MariaDB mechanism with a bit of engineering on Docker side to "propagate" the required files, or create a Python script using SQL Alchemy to abstract the SQL instructions to create and populate tables.
+As we started project with docker compose for MariaDb and weren't very proficient yet with the ORM, plus the idea of having "pre-fill" kept separate from the rest of app logic, we favored the first approach.
+
+Therefore "setup instructions" are managed through files stored in backoffice/init folder which is exposed to MariaDB container as a folder which it always parse the first time it is runned.
+
+- 01_schema.sql's sole responsability is to create the tables. It should never be removed.
+- 02_seed.sql is the one filling all tables. For now it supports only "demo mode" with admin, managers, branches and stocks prepopulated with a small, representative dataset.
+
+For now the easiest way to have app set up the way you like is either removing the second file and connecting to mariadb yourself to at least create Admin user and branches, or to edit the file as needed if you're more comfortable.
+
 
 ## Docker
 
