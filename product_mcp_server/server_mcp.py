@@ -301,6 +301,48 @@ async def get_products_for_branch(branch_id: int) -> list[dict]:
         )
     return resp.json()
 
+
+@mcp.resource("inventory://catalog-summary")
+async function get_full_catalog_inventory_resource() -> str:
+    """
+    Ressource MCP qui agrège le catalogue produit complet avec les quantités 
+    en stock consolidées pour toutes les branches.
+    """
+    import json
+    
+    # 1. Récupérer tous les produits
+    async with httpx.AsyncClient(timeout=10) as client:
+        prod_resp = await client.get(f"{PRODUCTS_API_URL}/api/v1/products?limit=250")
+        products = prod_resp.json()
+        if isinstance(products, dict):
+            products = products.get("items", products.get("results", []))
+
+        # 2. Récupérer toutes les branches
+        branches_resp = await client.get(
+            f"{INTERNAL_API_URL}/internal/branches/list",
+            headers={"X-API-KEY": INTERNAL_API_KEY}
+        )
+        branches = branches_resp.json() if branches_resp.status_code == 200 else []
+
+    # 3. Fusionner les données dans une structure propre pour le LLM
+    catalog_summary = []
+    for p in products:
+        catalog_summary.append({
+            "product_id": p["id"],
+            "sku": p["sku"],
+            "name": p["name"],
+            "category": p.get("category"),
+            "discontinued": p.get("discontinued", False),
+            "unit_price": p.get("unit_price")
+        })
+
+    return json.dumps({
+        "total_products": len(catalog_summary),
+        "branches_count": len(branches),
+        "catalog": catalog_summary
+    }, ensure_ascii=False, indent=2)
+
+
 if __name__ == "__main__":
     # transport HTTP car ce service tourne dans son propre conteneur Docker,
     # séparé du service ai_service qui va s'y connecter par le réseau.
