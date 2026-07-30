@@ -343,6 +343,52 @@ async def get_full_catalog_inventory_resource() -> str:
     }, ensure_ascii=False, indent=2)
 
 
+@mcp.tool()
+async def get_all_branch_stocks() -> list[dict]:
+    """
+    Récupère la liste de TOUS les stocks ventilés par branche pour l'ensemble du réseau.
+    À utiliser lorsque l'utilisateur demande une vue globale des stocks, un récapitulatif 
+    général, ou la liste des stocks pour toutes les branches.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            # 1. Récupération de toutes les branches
+            branches_resp = await client.get(
+                f"{INTERNAL_API_URL}/internal/branches/list",
+                headers={"X-API-KEY": INTERNAL_API_KEY},
+            )
+            if branches_resp.status_code >= 400:
+                raise ProductAPIError(f"Erreur branches {branches_resp.status_code}")
+
+            branches = branches_resp.json()
+            all_stocks = []
+
+            # 2. Agrégation du stock pour chaque branche
+            for b in branches:
+                branch_id = b["id"]
+                branch_label = b.get("label", f"Branche #{branch_id}")
+
+                stock_resp = await client.get(
+                    f"{INTERNAL_API_URL}/internal/branches/{branch_id}/stocks",
+                    headers={"X-API-KEY": INTERNAL_API_KEY},
+                )
+                
+                if stock_resp.status_code == 200:
+                    stocks = stock_resp.json()
+                    all_stocks.append({
+                        "branch_id": branch_id,
+                        "branch_name": branch_label,
+                        "stocks": stocks
+                    })
+
+            return all_stocks
+
+    except httpx.RequestError as exc:
+        raise ProductAPIError(
+            f"Impossible de contacter le Backoffice ({INTERNAL_API_URL}) : {exc}"
+        ) from exc
+
+
 if __name__ == "__main__":
     # transport HTTP car ce service tourne dans son propre conteneur Docker,
     # séparé du service ai_service qui va s'y connecter par le réseau.
