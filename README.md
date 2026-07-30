@@ -231,12 +231,6 @@ As Hbntory was designed and built within tight time constraints as a pedagogical
 
 ---
 
-
-
-### Accessible help
-
-FIXME (OPTIONAL built-in doc)
-
 ## Examples of use
 
 <details>
@@ -371,15 +365,26 @@ Couple of use-cases which are not supported.
 
 ## Technical information
 
+This section only present the high-level information. For more details on technical choices and in-depth explanations please confer our dedicated [Architecture](./ARCHITECTURE.md) page.
+
 ### General architecture
 
-FIXME
+The project relies on following core principles.
 
-### Process Flow
+1/ Business data is split in two parts: a catalog of products provided by a third party, exposed through an API; and a database managed by identified humans to affect stocks of products available for selling in various stores (named "branches").
 
-FIXME Mermaid diagram
+2/ The "end-user" part only exposes an Agent dedicated to answering questions about products and stocks by relying on a middleware "preparing answers" for it (no global data access). This way the manipulations of actual business data is strictly gated, limiting security risks at least from that channel.
 
-For a deep dive into the inner workings and design choices, including PATH resolution and function-level architecture, please read our dedicated [Architecture](./ARCHITECTURE.md) page.
+3/ The custom components are all made in Python to simplify the maintenance and evolution of the project.
+
+4/ As this application as a whole requires several components to run on a group of ports, it provides a Docker composition file to provide a quick & easy way to set up all services in a cohesive way.
+
+### Technical stack overview
+
+Python and related libraries (SQLAlchemy, LiteLLM, Google ADK, Fast MCP, Fast API): for creating the micro-services exposing each component on network.
+MariaDB: to manage data in a SQL-based relational database.
+Docker: to define each micro-service as a self-sufficient app and coordinate their uses and inter-communications.
+
 
 ### Memory management & Performance
 
