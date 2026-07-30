@@ -172,6 +172,7 @@ async function loadStock() {
         const info = await getProductInfo(item.product_id);
         if (info) {
           item.name = info.name || info.label || info.title;
+          item.sku = info.sku;
           item.category = info.category;
           item.supplier_name = info.supplier_name || info.supplier || info.brand;
         }
@@ -200,14 +201,20 @@ function renderStock() {
   stockData.forEach((item) => {
     const card = document.createElement("div");
     card.className = "stock-card";
+    
+    // 🔹 ID produit stocké en attribut HTML masqué (ex: <div class="stock-card" data-product-id="7">)
+    card.dataset.productId = item.product_id;
 
     const name = item.name || `Produit #${item.product_id}`;
+    const sku = item.sku || "SKU N/A";
     const category = item.category || "Inconnue";
     const supplier = item.supplier_name || item.supplier || "Inconnu";
 
     card.innerHTML = `
-      <div class="stock-tag">#${item.product_id}</div>
-      <div class="stock-name">${escapeHtml(name)}</div>
+      <div class="stock-tag">${escapeHtml(sku)}</div>
+      <div class="stock-name">
+        ${escapeHtml(name)} <small style="opacity: 0.7; font-weight: normal;">(${escapeHtml(sku)})</small>
+      </div>
       <div class="stock-meta">
         <span>Catégorie : ${escapeHtml(category)}</span>
         <span>Fournisseur : ${escapeHtml(supplier)}</span>
@@ -235,7 +242,6 @@ function renderStock() {
     stockListEl.appendChild(card);
   });
 }
-
 // 6. Action d'ajout de stock
 async function addStock(productId, amount) {
   if (!userBranchId) return;
