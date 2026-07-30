@@ -124,6 +124,8 @@ Otherwise you will need to specify the path to the compose file.
 To build all container images and start all microservices, run:
 `docker compose up -d --build`
 
+**IMPORTANT** as project uses community provided images AND a public Github repository for one service (products-api), a working network connexion allowing access to internet is required whenever you use the option --build (and a decent bandwith like >=1.5Mo sec is recommended).
+
 What does it do?
 - docker: name of the "containarization tool" which allows you to create and run apps and operating systems in a total isolation.
 - compose: one of the first level commands of docker: instructs it to find file(s) with specific name(s) in current filetree and parse them to get a series of instructions to create several "containers" lumped together. Here it will automatically target the "docker-compose.yml"
@@ -365,7 +367,7 @@ Couple of use-cases which are not supported.
 
 ## Technical information
 
-This section only present the high-level information. For more details on technical choices and in-depth explanations please confer our dedicated [Architecture](./ARCHITECTURE.md) page.
+This section only present the high-level information. For more details on technical choices and in-depth explanations please confer our dedicated [Architecture](./docs/ARCHITECTURE.md) page.
 
 ### General architecture
 
@@ -384,6 +386,19 @@ The project relies on following core principles.
 Python and related libraries (SQLAlchemy, LiteLLM, Google ADK, Fast MCP, Fast API): for creating the micro-services exposing each component on network.
 MariaDB: to manage data in a SQL-based relational database.
 Docker: to define each micro-service as a self-sufficient app and coordinate their uses and inter-communications.
+
+### Process Flow
+
+For detailed examples of sequence diagrams, please confer the "Sequence Diagram" section in the Architecture document.
+
+#### Backoffice...
+1/ Users must first authenticate through a localhost:BACKOFFICE_PORT/login with a check of their username/password tuple against the bcrypt hash in db.
+2/ Then they can access the interface.
+3/ Interface buttons are each associated with a specific Backoffice API endpoint, called on click. Operations send back a JSON message to confirm the success of failure.
+
+#### Frontoffice
+
+Anyone can access the Client User Interface and input a question. On submit, it is sent to AI agent which can retrieve context-specific information through the tools and resources exposed by MCP before formulating an answer.
 
 
 ### Memory management & Performance
