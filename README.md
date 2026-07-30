@@ -47,15 +47,44 @@ FIXME
 
 ### Prerequisite
 
-FIXME (Docker, Python, SQLite/MariaDb/Postgresl)
+To run the Hbntory platform, **Docker** and **Docker Compose** are the only core system requirements. Because all services (Backoffice API, External Products API, MCP Server, AI Service, and Frontend) are fully containerized, you do not need to install Python, MySQL, or Node.js locally on your host system.
 
-### 1. Downloading
-If you have git and are comfortable with command line,
-  you can simply open one and go to the directory in which you want calculator to be.
-  Then run (without the quotes) `"git clone https://github.com/llacote-holberton/holberton_inventory.git"`
-Otherwise you can simply download a zip containing all projects file
-  by following [this url](https://github.com/llacote-holberton/holberton_inventory/archive/refs/heads/main.zip)
-  then unfolding it where you want on your computer.
+#### Additional Requirements:
+- **Git**: To clone the project repository.
+- **Modern Web Browser**: Chrome, Firefox, Edge, or Safari to access the Backoffice Web UI and AI Client.
+
+---
+
+#### Installing Docker on your OS
+
+##### Windows 10
+1. Download and install **[Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/)**.
+2. During installation, make sure the **Use WSL 2 instead of Hyper-V** option is checked.
+3. Restart your computer after installation completes.
+
+##### Windows Subsystem for Linux (WSL / WSL 2)
+1. Install Docker Desktop on Windows (as described above).
+2. Open Docker Desktop, navigate to **Settings > Resources > WSL Integration**.
+3. Toggle the switch to enable integration for your installed Linux distribution (e.g., Ubuntu).
+4. Open your WSL terminal; `docker` and `docker compose` will now be available directly.
+
+##### Debian-based Linux (Ubuntu, Debian, Mint)
+Run the following commands in your terminal:
+```bash
+sudo apt update
+sudo apt install -y docker.io docker-compose-v2
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+# Note: Log out and log back in for the group membership change to take effect.
+```
+
+##### Arch-based Linux (Arch Linux, Manjaro)
+```
+sudo pacman -Syu docker docker-compose
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+# Note: Log out and log back in for the group membership change to take effect.
+```
 
 ### 2. Compiling / Configuring
 
