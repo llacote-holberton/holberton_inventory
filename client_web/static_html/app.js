@@ -8,6 +8,24 @@ const loadingMsg = document.getElementById("loading-msg");
 
 let currentSource = null;
 
+function setupLoginLink() {
+  const loginLink = document.getElementById("login-link");
+  if (!loginLink) return;
+
+  const host = window.BACKOFFICE_HOST || window.location.hostname || "localhost";
+  const port = window.BACKOFFICE_PORT || "8000";
+  const protocol = window.location.protocol || "http:";
+
+  loginLink.href = `${protocol}//${host}:${port}/ui/login`;
+}
+
+// S'exécute immédiatement SI le DOM est déjà prêt, sinon attend le DOMContentLoaded
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", setupLoginLink);
+} else {
+  setupLoginLink();
+}
+
 // Gestion des touches Entrée et Shift+Entrée
 questionField.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.shiftKey) {
@@ -73,3 +91,4 @@ form.addEventListener("submit", (event) => {
     questionField.focus();
   }
 });
+
