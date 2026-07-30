@@ -218,3 +218,34 @@ h1 { font-family: var(--font-display); font-weight: 600; font-size: 1.5rem; marg
 .modal-btn:active {
   transform: translateY(1px);
 }
+
+
+/* ==========================================================================
+   Bouton de déconnexion
+   ========================================================================== */
+.topnav .logout-btn,
+#logout-btn {
+  background: var(--brick);
+  color: #ffffff;
+  border: 1px solid var(--brick);
+  padding: 0.4rem 0.95rem;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: 1.5rem;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.topnav .logout-btn:hover,
+#logout-btn:hover {
+  background: #963c26; /* Rouge légèrement plus foncé au survol */
+  border-color: #963c26;
+  color: #ffffff;
+}
+
+.topnav .logout-btn:active,
+#logout-btn:active {
+  transform: translateY(1px);
+}
