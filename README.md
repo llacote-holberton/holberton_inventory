@@ -395,6 +395,11 @@ For detailed examples of sequence diagrams, please confer the "Sequence Diagram"
 
 Anyone can access the Client User Interface and input a question. On submit, it is sent to AI agent which can retrieve context-specific information through the tools and resources exposed by MCP before formulating an answer.
 
+### Architecture macro diagram
+
+<p align="center">
+  <img src="docs/illustrations/architecture_stocks-management_EN.svg" alt="Logo" width="600">
+</p>
 
 ### Memory management & Performance
 
