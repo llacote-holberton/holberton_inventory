@@ -32,6 +32,7 @@ async function init() {
     });
   }
 
+  // Récupération des infos de l'utilisateur connecté
   const whoamiResp = await apiFetch("/whoami");
   if (!whoamiResp || !whoamiResp.ok) return;
 
@@ -43,7 +44,34 @@ async function init() {
     return;
   }
 
+  // Point 4: Récupération et affichage du nom de l'utilisateur et de sa branche
+  await displayUserInfo(userData);
+
   await loadStock();
+}
+
+// Helper pour afficher les infos utilisateur et le nom de sa branche
+async function displayUserInfo(userData) {
+  const userNameEl = document.getElementById("user-display-name");
+  const branchNameEl = document.getElementById("branch-display-name");
+
+  if (userNameEl) {
+    userNameEl.textContent = userData.username || userData.name || userData.sub || `Manager #${userData.user_id}`;
+  }
+
+  try {
+    const res = await apiFetch("/branches");
+    if (res && res.ok) {
+      const branches = await res.json();
+      const myBranch = branches.find((b) => b.id === userBranchId);
+      if (branchNameEl) {
+        branchNameEl.textContent = myBranch ? (myBranch.name || myBranch.label) : `Branche #${userBranchId}`;
+      }
+    }
+  } catch (err) {
+    console.warn("Impossible de récupérer le nom de la branche:", err);
+    if (branchNameEl) branchNameEl.textContent = `Branche #${userBranchId}`;
+  }
 }
 
 // 2. Fetch wrapper authentifié (pour l'API Backoffice sur le port 8000)
@@ -67,7 +95,7 @@ async function apiFetch(url, options = {}) {
   return response;
 }
 
-// 3. Récupération des détails d'un produit depuis l'API Produit (Port 5000)
+// 3. Récupération des détails d'un produit par ID (Port 5000)
 async function getProductInfo(productId) {
   if (productCache.has(productId)) {
     return productCache.get(productId);
@@ -87,7 +115,47 @@ async function getProductInfo(productId) {
   return null;
 }
 
-// 4. Chargement des stocks depuis l'API Backoffice + enrichissement via l'API Produit
+//Adding function to find product from SKU or ID with Products API
+async function resolveProductBySkuOrId(query) {
+  const cleanQuery = String(query).trim();
+
+  // Si c'est un identifiant numérique pur, on teste en direct l'endpoint par ID
+  if (/^\d+$/.test(cleanQuery)) {
+    const productById = await getProductInfo(parseInt(cleanQuery, 10));
+    if (productById) return productById;
+  }
+
+  // Sinon (ou en fallback), recherche par SKU / mot-clé via l'endpoint de recherche
+  try {
+    const response = await fetch(`${PRODUCTS_API_URL}/api/v1/products/search?q=${encodeURIComponent(cleanQuery)}`);
+    if (response.ok) {
+      const searchData = await response.json();
+      const results = searchData.results || [];
+
+      // Recherche d'une correspondance exacte sur le SKU
+      const exactSkuMatch = results.find(
+        (p) => p.sku && p.sku.toLowerCase() === cleanQuery.toLowerCase()
+      );
+
+      if (exactSkuMatch) {
+        productCache.set(exactSkuMatch.id, exactSkuMatch);
+        return exactSkuMatch;
+      }
+
+      // Si pas de correspondance exacte mais des résultats, renvoyer le premier
+      if (results.length > 0) {
+        productCache.set(results[0].id, results[0]);
+        return results[0];
+      }
+    }
+  } catch (err) {
+    console.warn(`Erreur lors de la recherche du produit "${cleanQuery}":`, err);
+  }
+
+  return null;
+}
+
+// 4. Chargement des stocks depuis l'API Backoffice + enrichissement
 async function loadStock() {
   if (!userBranchId) return;
 
@@ -99,14 +167,12 @@ async function loadStock() {
 
     stockData = await response.json();
 
-    // Enrichissement en parallèle pour chaque produit
     await Promise.all(
       stockData.map(async (item) => {
         const info = await getProductInfo(item.product_id);
         if (info) {
           item.name = info.name || info.label || info.title;
           item.category = info.category;
-          // ✅ On mappe correctement supplier_name depuis la réponse API
           item.supplier_name = info.supplier_name || info.supplier || info.brand;
         }
       })
@@ -137,7 +203,6 @@ function renderStock() {
 
     const name = item.name || `Produit #${item.product_id}`;
     const category = item.category || "Inconnue";
-    // ✅ Compatible supplier_name, supplier ou "Inconnu"
     const supplier = item.supplier_name || item.supplier || "Inconnu";
 
     card.innerHTML = `
@@ -209,21 +274,37 @@ async function removeStock(productId, amount) {
   }
 }
 
-// 8. Formulaire d'ajout d'une nouvelle référence par ID
+// 8. Formulaire d'ajout d'une nouvelle référence (Point 1, 2, 3)
 document.getElementById("new-stock-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const idInput = document.getElementById("new-product-id");
   const qtyInput = document.getElementById("new-product-qty");
 
-  const productId = parseInt(idInput.value, 10);
+  const query = idInput.value.trim();
   const quantity = parseInt(qtyInput.value, 10);
 
-  if (!productId || !quantity || productId <= 0 || quantity <= 0) {
-    alert("Veuillez saisir un ID produit valide et une quantité strictement positive.");
+  if (!query || !quantity || quantity <= 0) {
+    alert("Veuillez saisir un identifiant/SKU valide et une quantité strictement positive.");
     return;
   }
 
-  await addStock(productId, quantity);
+  // Résolution du produit par SKU ou ID
+  const product = await resolveProductBySkuOrId(query);
+
+  // Point 2 : Le produit n'existe pas
+  if (!product) {
+    alert("Ce produit n'existe pas");
+    return;
+  }
+
+  // Point 3 : Le produit est discontinued
+  if (product.discontinued) {
+    alert("ce produit ne fait plus partie de notre catalogue il est conservé comme référence pour d'anciennes commandes");
+    return;
+  }
+
+  // Ajout du stock avec l'ID numérique réel du produit trouvé
+  await addStock(product.id, quantity);
 
   idInput.value = "";
   qtyInput.value = "1";
