@@ -162,12 +162,36 @@ For examples of use please go to [Examples of use](#examples-of-use)
 As this was a short-timed and severely constrained project tailored for pedagogy first, it is simple by design.
 
 ### Supported (v1.0)
-- FIXME
+
+Simple management and query of product stocks through the combination of a persistent database to store stock informations, access-restricted web interfaces to manage stock for each company's store ('branch'), and a public interface for anyone to learn about products and their potential availability across branches.
+
+#### Multi-Branch & Inventory Core Management
+- **Branch-Specific Stock Tracking**: Manage and inspect stock quantities independently per physical or virtual store branch.
+- **Atomic Stock Adjustments**: Fast and secure addition and removal of stock items with built-in validation (e.g., preventing negative inventory balances).
+- **Product Catalog Integration**: Seamless integration with external product reference APIs, supporting instant lookups by numeric Product ID or alphanumeric SKU.
+- **Discontinued Item Protection**: Automatic validation preventing stock additions for phased-out catalog items while preserving existing inventory records.
+
+#### Real-Time Synchronization (Server-Sent Events)
+- **Live UI Updates**: Pub/Sub architecture built with Python `asyncio.Queue` streaming stock modifications live via **Server-Sent Events (SSE)**.
+- **Zero-Polling Reactivity**: Connected Manager dashboards dynamically update quantities and alert visual states across open browser sessions in real-time without full page refreshes.
+
+#### Security & Role-Based Access Control (RBAC)
+- **JWT Authentication**: Stateless authentication issuing signed JSON Web Tokens (`/login`, `/whoami`).
+- **Strict Role Isolation**:
+  - **Admin**: Full access to global user management (create, activate/deactivate, reset passwords), global branch listing, and manager assignments.
+  - **Manager**: Strict scope isolation enforcing access exclusively to their assigned branch's stock data.
+- **Inter-Service Authentication**: Protected internal API communication secured with static API key headers (`X-API-KEY`) between the MCP Server and Backoffice.
+
+#### AI Assistant & Model Context Protocol (MCP) Integration
+- **Natural Language Inventory Queries**: Chat-based AI assistant capable of answering complex inventory questions and executing stock checks using natural language.
+- **FastMCP Integration**: Custom MCP server exposing structured **Tools** (`get_stock`, `list_branches`, `get_all_branch_stocks`) and **Resources** (`inventory://catalog-summary`) directly to the LLM agent.
+- **Multi-LLM Provider Support**: Powered by LiteLLM / Google ADK, allowing seamlessly swapping between 100+ LLMs (OpenAI, Google Gemini, Anthropic, NVIDIA NIM, Groq, local Ollama, etc.) via simple environment configuration.
+
+#### Containerized Architecture & Portability
+- **Fully Orchestrated Stack**: 6-container Docker Compose setup (`stocks-db`, `products-api`, `internal-api`, `backoffice`, `mcp-server`, `ai-service`, `web-client`).
+- **Database Abstraction**: MariaDB relational backend for persistent production storage paired with SQLAlchemy ORM for test portability.
 
 
-
-### Not supported (yet)
-FIXME
 
 ### Accessible help
 
