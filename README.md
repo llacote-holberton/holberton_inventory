@@ -137,6 +137,13 @@ You can check the status of all running containers at any time with:
 You can also check the logs of the containers by doing the following command, with or without a service name as parameter.
 `docker compose logs <optional:name-of-service-as-defined-in-compose-file>`
 
+Finally, you can monitor the live real-time memory and CPU consumption of all running containers across your Hbntory stack by executing:
+```
+docker stats
+```
+Or just a snapshot of it at given time with `--no-stream` option added (`docker stats --no-stream`).
+
+
 ## Stopping
 To stop the stack without losing any information, just run this.
 `docker compose down`.
