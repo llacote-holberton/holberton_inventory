@@ -1,22 +1,25 @@
 
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HBntory — Stock de ma branche</title>
-<link rel="stylesheet" href="/static/manager.css">
-</head>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HBntory — Espace Manager</title>
+    <!-- 1. common.js for security and logout (and later dynamic common parts injection) -->
+    <script src="/static/common.js"></script>
+    <link rel="stylesheet" href="/static/manager.css">
+  </head>
 <body>
   <header class="topbar">
     <div class="wordmark">HBNTORY</div>
     <nav class="topnav">
-      <a href="../client_web/index.html" class="nav-accent">Consulter l'Agent IA</a>
+      <a href="https//localhost:8080/index.html" class="nav-accent">Consulter l'Agent IA</a>
+      <button id="logout-btn" class="logout-btn nav-accent">Se déconnecter</button>
     </nav>
   </header>
 
   <main class="page">
-    <h1>Stock de ma branche</h1>
+    <h1>Stock - Gestion de ma branche</h1>
 
     <section class="ticket">
       <p class="ticket-label">Ajouter un produit au stock</p>

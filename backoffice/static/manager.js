@@ -1,30 +1,34 @@
 /**
  * Interface manager (stock de la branche).
  *
- * TODO (une fois l'API du Backoffice prête côté binôme) :
- *   - Remplacer STOCK_API_URL par le vrai endpoint (ex. GET /api/stock/mine)
- *   - Envoyer le token d'authentification (ex. header Authorization) —
- *     rappel de la consigne : l'accès au Backoffice doit être authentifié
- *   - Remplacer adjustStock() par de vrais appels
- *     POST /api/stock/add et POST /api/stock/remove
- *   - Retirer MOCK_STOCK : ces données ne servent qu'à visualiser
- *     l'interface avant que le Backoffice soit prêt.
  */
 
-function checkAuth() {
-    // Si on est déjà sur la page de login, rien à faire
-    if (window.location.pathname.includes("/login")) return;
+async function init() {
+  checkAuth();
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-        // Put /ui/login once it's good'
-        window.location.href = "localhost:8000/ui/login";
-    }
+  // Bouton de déconnexion
+  const logoutBtn = document.getElementById("logout-btn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.clear();
+      window.location.href = "/ui/login";
+    });
+  }
+
+  // Récupération des infos du manager pour obtenir son branch_id
+  const whoamiResp = await apiFetch("/whoami");
+  if (!whoamiResp || !whoamiResp.ok) return;
+
+  const userData = await whoamiResp.json();
+  userBranchId = userData.branch_id;
+
+  if (!userBranchId) {
+    alert("Erreur : Aucun identifiant de branche associé à ce compte manager.");
+    return;
+  }
+
+  await loadStock();
 }
-
-// Execute immediately
-// (FIXME maybe should be separate script loaded in header
-checkAuth();
 
 // ============== 3. Provides a fetch wrapper to automatically use authn token ===================
 async function apiFetch(url, options = {}) {
@@ -51,25 +55,6 @@ async function apiFetch(url, options = {}) {
 }
 
 
-
-const STOCK_API_URL = "http://localhost:8000/api/stock/mine";
-
-const MOCK_STOCK = [
-  { id: 32, name: "Legacy VGA Adapter", category: "Accessories", supplier: "OpsReady Warehouse", quantity: 15 },
-  { id: 33, name: "RFID Access Card Pack", category: "Security", supplier: "WebCraft Devices", quantity: 0 },
-  { id: 34, name: "USB Security Key", category: "Security", supplier: "WebCraft Devices", quantity: 42 },
-];
-
-// Utilisé uniquement en mode mock pour simuler l'enrichissement que le
-// vrai Backoffice ferait via l'API Produit (nom, catégorie, fournisseur)
-// quand on ajoute un produit pas encore stocké dans la branche.
-const MOCK_CATALOG = {
-  32: { name: "Legacy VGA Adapter", category: "Accessories", supplier: "OpsReady Warehouse" },
-  33: { name: "RFID Access Card Pack", category: "Security", supplier: "WebCraft Devices" },
-  34: { name: "USB Security Key", category: "Security", supplier: "WebCraft Devices" },
-  40: { name: "Wireless Presenter Clicker", category: "Accessories", supplier: "ClickTech" },
-};
-
 const stockListEl = document.getElementById("stock-list");
 let stockData = [];
 
@@ -83,32 +68,38 @@ function escapeHtml(str) {
 }
 
 function renderStock() {
+  if (!stockListEl) return;
   stockListEl.innerHTML = "";
+
+  if (stockData.length === 0) {
+    stockListEl.innerHTML = `<p class="placeholder">Aucun produit en stock pour cette branche.</p>`;
+    return;
+  }
 
   stockData.forEach((item) => {
     const card = document.createElement("div");
     card.className = "stock-card";
     card.innerHTML = `
-      <div class="stock-tag">#${item.id}</div>
-      <div class="stock-name">${item.name}</div>
-      <div class="stock-meta">
-        <span>Catégorie : ${item.category}</span>
-        <span>Fournisseur : ${item.supplier}</span>
-      </div>
+      <div class="stock-tag">#${item.product_id}</div>
+      <div class="stock-name">Produit #${item.product_id}</div>
       <div class="stock-qty">
         <span class="current ${item.quantity === 0 ? "zero" : ""}">Quantité actuelle : ${item.quantity}</span>
-        <input type="number" min="1" value="1" aria-label="Quantité à ajouter ou retirer pour ${item.name}">
+        <input type="number" min="1" value="1" aria-label="Quantité à ajuster pour le produit #${item.product_id}">
         <button class="add" type="button">Ajouter</button>
         <button class="remove" type="button">Retirer</button>
       </div>
     `;
 
     const input = card.querySelector("input");
+
     card.querySelector(".add").addEventListener("click", () => {
-      adjustStock(item.id, parseInt(input.value, 10) || 0);
+      const amount = parseInt(input.value, 10) || 0;
+      if (amount > 0) addStock(item.product_id, amount);
     });
+
     card.querySelector(".remove").addEventListener("click", () => {
-      adjustStock(item.id, -(parseInt(input.value, 10) || 0));
+      const amount = parseInt(input.value, 10) || 0;
+      if (amount > 0) removeStock(item.product_id, amount);
     });
 
     stockListEl.appendChild(card);
@@ -133,16 +124,21 @@ async function adjustStock(productId, delta) {
 }
 
 async function loadStock() {
+  if (!userBranchId) return;
+
   try {
-    const response = await fetch(STOCK_API_URL);
-    if (!response.ok) throw new Error(`Statut HTTP ${response.status}`);
+    const response = await apiFetch(`/branches/${userBranchId}/stocks`);
+    if (!response || !response.ok) {
+      throw new Error(`Statut HTTP ${response?.status}`);
+    }
     stockData = await response.json();
+    renderStock();
   } catch (error) {
-    // Le Backoffice n'est pas encore prêt : on retombe sur des données de
-    // démonstration pour pouvoir travailler l'interface dès maintenant.
-    stockData = MOCK_STOCK;
+    console.error("Erreur de chargement des stocks:", error);
+    if (stockListEl) {
+      stockListEl.innerHTML = `<p class="placeholder">Erreur lors du chargement des stocks.</p>`;
+    }
   }
-  renderStock();
 }
 
 function addNewProductStock(productId, quantity) {
@@ -182,4 +178,4 @@ document.getElementById("new-stock-form").addEventListener("submit", (event) => 
   qtyInput.value = "1";
 });
 
-loadStock();
+document.addEventListener("DOMContentLoaded", init);
