@@ -1,17 +1,29 @@
 /**
  * Interface manager (stock de la branche).
- *
  */
 
 let userBranchId = null;
 let stockData = [];
 const stockListEl = document.getElementById("stock-list");
 
-// ============== 1. Initializing page (checks auth+loaduserinfo+stocks) ===================
+// URL de l'API Produit (Port 5000) et cache local
+const PRODUCTS_API_URL = "http://localhost:5000";
+const productCache = new Map();
+
+// Helper de sécurité XSS
+function escapeHtml(str) {
+  return String(str || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+// 1. Initialisation de la page
 async function init() {
   checkAuth();
 
-  // Bouton de déconnexion
   const logoutBtn = document.getElementById("logout-btn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
@@ -20,7 +32,6 @@ async function init() {
     });
   }
 
-  // Récupération des infos du manager pour obtenir son branch_id
   const whoamiResp = await apiFetch("/whoami");
   if (!whoamiResp || !whoamiResp.ok) return;
 
@@ -35,31 +46,82 @@ async function init() {
   await loadStock();
 }
 
-// ============== 2. Provides a fetch wrapper automate token injection in requests ===================
+// 2. Fetch wrapper authentifié (pour l'API Backoffice sur le port 8000)
 async function apiFetch(url, options = {}) {
-    const token = localStorage.getItem("token");
-    
-    // Fusionner les headers existants avec le token
-    options.headers = {
-        ...options.headers,
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json"
-    };
+  const token = localStorage.getItem("token");
 
-    const response = await fetch(url, options);
+  options.headers = {
+    ...options.headers,
+    "Authorization": `Bearer ${token}`,
+    "Content-Type": "application/json"
+  };
 
-    // Si le token est expiré ou invalide (401), renvoyer vers le login
-    if (response.status === 401) {
-        localStorage.clear();
-        // Put /ui/login once it's good'
-        window.location.href = "localhost:8000/ui/login";
-        return;
-    }
+  const response = await fetch(url, options);
 
-    return response;
+  if (response.status === 401) {
+    localStorage.clear();
+    window.location.href = "/ui/login";
+    return null;
+  }
+
+  return response;
 }
 
-// ============== 3. Generates the list of products in stock ===================
+// 3. Récupération des détails d'un produit depuis l'API Produit (Port 5000)
+async function getProductInfo(productId) {
+  if (productCache.has(productId)) {
+    return productCache.get(productId);
+  }
+
+  try {
+    const response = await fetch(`${PRODUCTS_API_URL}/api/v1/products/${productId}`);
+    if (response.ok) {
+      const data = await response.json();
+      productCache.set(productId, data);
+      return data;
+    }
+  } catch (err) {
+    console.warn(`Impossible de contacter l'API Produit pour le produit #${productId}:`, err);
+  }
+
+  return null;
+}
+
+// 4. Chargement des stocks depuis l'API Backoffice + enrichissement via l'API Produit
+async function loadStock() {
+  if (!userBranchId) return;
+
+  try {
+    const response = await apiFetch(`/branches/${userBranchId}/stocks`);
+    if (!response || !response.ok) {
+      throw new Error(`Statut HTTP ${response?.status}`);
+    }
+
+    stockData = await response.json();
+
+    // Enrichissement en parallèle pour chaque produit
+    await Promise.all(
+      stockData.map(async (item) => {
+        const info = await getProductInfo(item.product_id);
+        if (info) {
+          item.name = info.name || info.label || info.title;
+          item.category = info.category;
+          // ✅ On mappe correctement supplier_name depuis la réponse API
+          item.supplier_name = info.supplier_name || info.supplier || info.brand;
+        }
+      })
+    );
+
+    renderStock();
+  } catch (error) {
+    console.error("Erreur de chargement des stocks:", error);
+    if (stockListEl) {
+      stockListEl.innerHTML = `<p class="placeholder">Erreur lors du chargement des stocks.</p>`;
+    }
+  }
+}
+
+// 5. Affichage du stock
 function renderStock() {
   if (!stockListEl) return;
   stockListEl.innerHTML = "";
@@ -72,12 +134,22 @@ function renderStock() {
   stockData.forEach((item) => {
     const card = document.createElement("div");
     card.className = "stock-card";
+
+    const name = item.name || `Produit #${item.product_id}`;
+    const category = item.category || "Inconnue";
+    // ✅ Compatible supplier_name, supplier ou "Inconnu"
+    const supplier = item.supplier_name || item.supplier || "Inconnu";
+
     card.innerHTML = `
       <div class="stock-tag">#${item.product_id}</div>
-      <div class="stock-name">Produit #${item.product_id}</div>
+      <div class="stock-name">${escapeHtml(name)}</div>
+      <div class="stock-meta">
+        <span>Catégorie : ${escapeHtml(category)}</span>
+        <span>Fournisseur : ${escapeHtml(supplier)}</span>
+      </div>
       <div class="stock-qty">
         <span class="current ${item.quantity === 0 ? "zero" : ""}">Quantité actuelle : ${item.quantity}</span>
-        <input type="number" min="1" value="1" aria-label="Quantité à ajuster pour le produit #${item.product_id}">
+        <input type="number" min="1" value="1" aria-label="Quantité à ajuster pour ${escapeHtml(name)}">
         <button class="add" type="button">Ajouter</button>
         <button class="remove" type="button">Retirer</button>
       </div>
@@ -99,28 +171,7 @@ function renderStock() {
   });
 }
 
-// async function adjustStock(productId, amount, action) {
-//   const endpoint = `/branches/${currentBranchId}/stock/${action}`;
-//   
-//   const response = await apiFetch(endpoint, {
-//     method: "POST",
-//     body: JSON.stringify({
-//       product_id: productId,
-//       amount: amount
-//     })
-//   });
-// 
-//   if (!response) return;
-// 
-//   if (response.ok) {
-//     await loadStocks(); // Rechargement simple et propre de la liste
-//   } else {
-//     const errorData = await response.json();
-//     alert(`Erreur : ${errorData.detail || "Opération impossible"}`);
-//   }
-// }
-
-// ============== 4a. Send stock change instruction - Add ===================
+// 6. Action d'ajout de stock
 async function addStock(productId, amount) {
   if (!userBranchId) return;
 
@@ -139,7 +190,7 @@ async function addStock(productId, amount) {
   }
 }
 
-// ============== 4b. Send stock change instruction - Remove ===================
+// 7. Action de retrait de stock
 async function removeStock(productId, amount) {
   if (!userBranchId) return;
 
@@ -158,50 +209,7 @@ async function removeStock(productId, amount) {
   }
 }
 
-// ============== 5. Loading stock data from db API ===================
-async function loadStock() {
-  if (!userBranchId) return;
-
-  try {
-    const response = await apiFetch(`/branches/${userBranchId}/stocks`);
-    if (!response || !response.ok) {
-      throw new Error(`Statut HTTP ${response?.status}`);
-    }
-    stockData = await response.json();
-    renderStock();
-  } catch (error) {
-    console.error("Erreur de chargement des stocks:", error);
-    if (stockListEl) {
-      stockListEl.innerHTML = `<p class="placeholder">Erreur lors du chargement des stocks.</p>`;
-    }
-  }
-}
-
-// Superceded by the function below directly in form listener.
-// function addNewProductStock(productId, quantity) {
-//   const existing = stockData.find((p) => p.id === productId);
-//   if (existing) {
-//     // Le produit est déjà en stock dans cette branche : on incrémente au
-//     // lieu de créer une deuxième ligne pour le même produit.
-//     adjustStock(productId, quantity);
-//     return;
-//   }
-// 
-//   // TODO : en vrai, le Backoffice doit d'abord vérifier que ce produit
-//   // existe réellement (via l'API Produit, à travers le serveur MCP ou un
-//   // appel direct côté Backoffice) avant de créer une ligne de stock, et
-//   // renvoyer nom/catégorie/fournisseur depuis cette vérification plutôt
-//   // que depuis un catalogue local comme ici.
-//   const catalogEntry = MOCK_CATALOG[productId] || {
-//     name: `Produit #${productId} (non reconnu en mode mock)`,
-//     category: "Inconnue",
-//     supplier: "Inconnu",
-//   };
-// 
-//   stockData.push({ id: productId, quantity, ...catalogEntry });
-//   renderStock();
-// }
-
+// 8. Formulaire d'ajout d'une nouvelle référence par ID
 document.getElementById("new-stock-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const idInput = document.getElementById("new-product-id");
@@ -215,20 +223,10 @@ document.getElementById("new-stock-form")?.addEventListener("submit", async (eve
     return;
   }
 
-  // Envoie la requête d'ajout directement à l'API backend
   await addStock(productId, quantity);
 
   idInput.value = "";
   qtyInput.value = "1";
 });
-
-function escapeHtml(str) {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
 
 document.addEventListener("DOMContentLoaded", init);
