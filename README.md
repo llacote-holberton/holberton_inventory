@@ -244,19 +244,127 @@ FIXME (OPTIONAL built-in doc)
 
 ### Valid examples
 
-FIXME
+#### Getting information on a specific product (per id or sku) in various languages
 
-| Use case                                         | Prompt                              | Answer              |
-|--------------------------------------------------|-------------------------------------------|---------------|
-| Listing all products of a branch      | `echo "ls -latr /tmp" | ./hsh`            |
+Question: `Donne moi les détails du produit 3` | `Donne moi les détails du produit HB-MON-2101`
+Answer:
+```
+Voici les détails du produit 3 | HB-MON-2101:
 
+- **Nom** : 27 inch Lab Monitor
+- **SKU** : HB-MON-2101
+- **Catégorie** : Displays
+- **Marque** : LabForge
+- **Prix unitaire** : 229,50 USD
+- **Description** : Training catalog item for HBntory integration: 27 inch lab monitor.
+- **Tags** : display, lab, hdmi
+- **Arrêté** : Non
+```
+
+Question: `Give me all informations about HB-MON-2101`
+Answer:
+```
+Here are all the details for **HB-MON-2101**:
+
+- **Name:** 27 inch Lab Monitor
+- **Description:** Training catalog item for HBntory integration: 27 inch lab monitor.
+- **Category:** Displays
+- **Brand:** LabForge
+- **Unit Price:** $229.50 USD
+- **Discontinued:** No
+- **Tags:** display, lab, hdmi
+- **Product ID:** 3
+```
+
+Question: `Gib mir alle Informationen zu HB-MON-2101.`
+Answer:
+```Hier sind alle Informationen zum Produkt **HB-MON-2101**:
+
+- **Name:** 27 inch Lab Monitor
+- **SKU:** HB-MON-2101
+- **Kategorie:** Displays
+- **Marke:** LabForge
+- **Preis:** 229,50 USD
+- **Beschreibung:** Training catalog item for HBntory integration: 27 inch lab monitor.
+- **Tags:** display, lab, hdmi
+- **Eingestellt:** Nein`
+```
+
+NOTE: only western languages are correctly supported. Questions made in other languages like arabic or asian ones (ex `HB-MON-2101に関するすべての情報を教えてください`) have a high probability of ending up with answers in agent's default language aka French.
+
+### Questions about stocks for a product or a branch
+
+Question: `Give me all products available in Toulouse Esquirol branch`
+Anwser:
+```
+Here are the products available in the **Toulouse Esquirol** branch:
+
+| SKU | Product | Quantity | Unit Price |
+|---|---|---|---|
+| HB-MON-2102 | 24 inch Compact Monitor (LabForge) | 15 | $169.99 |
+| *(unknown)* | Product ID 666 | 45 | — |
+
+Note: The product with ID 666 could not be retrieved from the catalog (it appears to be missing or invalid), so its details are unavailable.
+```
+
+Question: `Give me all stocks availability across all branches for HB-MON-2102`
+Answer
+```
+Here are the stock availability details for **HB-MON-2102** (24 inch Compact Monitor):
+
+| Branch ID | Quantity |
+|-----------|----------|
+| 1 | 15 |
+| 2 | 8 |
+| 5 | 24 |
+| **Total** | **47** |
+```
+
+Question: `Give me all stocks everywhere`
+Answer:
+```
+Here are all the stocks across the network:
+
+**Caussade (branch 4)**
+- Produit #2: 777
+- Produit #6: 0
+
+**Paris La Défense (branch 5)**
+- Produit #1: 10,013
+- Produit #3: 1
+- Produit #4: 24
+- Produit #7: 888
+- Produit #18: 29
+- Produit #32: 2
+- Produit #35: 65
+- Produit #666: 1
+
+**Rodez (branch 3)**
+- (no stock)
+
+**Toulouse Carmes (branch 2)**
+- Produit #4: 8
+
+**Toulouse Esquirol (branch 1)**
+- Produit #4: 15
+- Produit #666: 45
+```
+
+
+### Mised questions
+Question: `If I want to buy 3 HB-MON-2102 and as many HB-KBD-4102, which branches should I visit? `
+Answer: `To buy 3 units of HB-MON-2102 and as many HB-KBD-4102 as possible, you should visit **branch 5**, which has 24 monitors and 888 keyboards in stock — more than enough for both items in one stop.`
 
 ### Failing examples
-Couple of use-cases which are not supported.
 
-| Use case                                                                        | Command line                                  |
-|---------------------------------------------------------------------------------|-----------------------------------------------|
-| FIXME   | FIXME |
+The AI Agent is configured to only process questions directly related to stocks and products. Anything beyond will result in a polite refuse or plain incapability to give pertinent answers.
+
+Couple of use-cases which are not supported.
+`What is the current weather in Toulouse?`
+`Give me the winning numbers on the next French National Lottery.`
+
+
+-> `I'm having trouble understanding your question, could you clarify please?`
 
 
 </details>
