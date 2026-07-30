@@ -4,7 +4,50 @@ This document aims at providing more in-depth information on how (and why) the a
 
 ## Data management
 
-As the business requirements imposed to use a "product catalog" provided by an external API, 
+### Stocks, Users and Branches
+
+As the business requirements imposed to use a "product catalog" provided by an external API, we had the strict constraint of not storing anything else than the Product ID in our database.
+Alongside, the business rules implicitely put out of scope the management of branches themselves (creating/deleting it).
+
+As such, our database schema for the v1 is simple on purpose. In a v2 we would probably add additional metadata for users (last logged in, last modified) and possibly computed data on branches to set up a tracking system to follow and historize operations on every part, journalized into a file on system.
+
+```
+
+erDiagram
+    BRANCHES {
+        int id PK
+        string name
+    }
+
+    USERS {
+        int id PK
+        string username
+        string password_hash
+        string role "admin | manager"
+        int branch_id FK "NULL si role=admin"
+        boolean is_active
+        datetime created_at
+        datetime updated_at
+    }
+
+    STOCK {
+        int id PK
+        int branch_id FK
+        string product_id "réf. externe, pas de FK"
+        int quantity "CHECK >= 0"
+        datetime updated_at
+    }
+
+    BRANCHES ||--o{ USERS : "assigné à (NULL si admin)"
+    BRANCHES ||--o{ STOCK : "détient"
+
+```
+
+Note that in stocks only the product id is stored per explicit project requirement.
+As such actual exploitation of data requires assembly of product id and its details provided through the external Products API, which contract and specifications can be read [on its repository](https://github.com/hbtn-edu/hbntory-products-api/blob/main/docs/api_contract.md).
+
+Currently the assembly is done in two functional spaces, the Backoffice and the MCP server, as we needed to parallelize to implement features as quickly as possible.
+In a v2 it would be probably refactored so that the Backoffice prepares once and for all the products catalog (since it needs it anyways for Managers to add/remove stocks) and expose it on a single API endpoint (with support for batching request and filters to avoid useless load).
 
 ## Docker
 
