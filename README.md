@@ -109,10 +109,10 @@ Before launching the stack, you must update the following placeholder values in 
   `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`
 - JWT_SECRET: used by the Backoffice API to sign authentication tokens.
   Generate a unique secret string using the same command above.
-- LLA_MODEL_NAME: provide here a "machine name" for the desired model (confer Annex 1 for more information) FIXME change .env.example value for ollama/llama3.
+- LLA_MODEL_NAME: provide here a "machine name" for the desired model. NOTE that by default the model is Nvidia's minmax3, which will require you to create a (free) access and related API Key. Confer https://platform.minimax.io/docs/guides/quickstart-preparation.
 - LLM_MODEL_API_KEY: provide your API key for the configured LLM provider
 
-For more information on LLM configuration specifically, please confer the Annex 1: choosing your LLM model (FIXME ADD ANNEX either inline at document end or as a separate document in docs.).
+For more information on LLM configuration specifically, please confer the [Annex 1: choosing your LLM model](docs/ANNEX-1.md).
 
 
 # Step 2: Managing the environment (repeatable)
