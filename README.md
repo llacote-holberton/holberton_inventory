@@ -403,13 +403,30 @@ Anyone can access the Client User Interface and input a question. On submit, it 
 
 ### Memory management & Performance
 
-FIXME (evaluation of average memory used by all docker containers )
+Here is what you can expect on a somewhat modern machine (snapshot taken on a AMD Ryzen 7 6800HS with 16 GB of basic DDR5 RAM) with all services running idle.
 
+| CONTAINER ID | NAME                 | CPU % | MEM USAGE / LIMIT   | MEM % | NET I/O       | BLOCK I/O       | PIDS |
+| ---          | ---                  | ---   | ---                 | ---   | ---           | ---             | ---  |
+| 1dfd230ddd19 | hbntory-web-client   | 0.18% | 44.79MiB / 14.86GiB | 0.29% | 1.44kB / 126B | 17MB / 897kB    | 6    |
+| ca5a9c35cb7d | hbntory-ai-service   | 0.17% | 149.3MiB / 14.86GiB | 0.98% | 1.52kB / 126B | 51.7MB / 1.15MB | 6    |
+| 45c0156a4325 | hbntory-mcp-server   | 0.20% | 61MiB / 14.86GiB    | 0.40% | 1.69kB / 126B | 22.4MB / 909kB  | 1    |
+| 9ba4063fd0ab | hbntory-internal-api | 0.19% | 74.81MiB / 14.86GiB | 0.49% | 1.73kB / 126B | 31.3MB / 938kB  | 6    |
+| 5e1de8ca3f1e | hbntory-backoffice   | 0.18% | 77.83MiB / 14.86GiB | 0.51% | 1.77kB / 126B | 33.6MB / 958kB  | 6    |
+| 6627f200a4dc | hbntory-stocks-db    | 0.01% | 166.6MiB / 14.86GiB | 1.10% | 1.82kB / 126B | 48.9MB / 32.8kB | 10   |
+| 4d50f7256afe | hbntory-products-api | 0.01% | 26.06MiB / 14.86GiB | 0.17% | 2.08kB / 126B | 16.4MB / 0B     | 1    |
+
+You can expect an overhead of roughly 200Mo additional memory when one "natural language request" is submitted to the AI agent, with most of it being consumed by that service itself.
 
 ## Testing
 
-FIXME OPTIONAL if we have enough time to really make tests
-For detailed instructions on how to run our manual and automated test suites, please refer to our [Testing Guide](./TESTING.md).
+For now the only parts of the app covered by automated tests is the backoffice part.
+Tests cover roughly 80% of all use-cases across CRUD operations on base (Stocks, Users, Branches) and API calls (Internal API used by MCP server, Backoffice API used by authenticated users's interfaces).
+
+To run the whole test suite, please from the project's root use this chain of commands.
+`cd backoffice && pytest`
+This is enough to automatically run all "sub-test-suite files" located in `backoffice/tests` each covering one functional aspect.
+
+For detailed instructions on how to run partial tests and the currently covered use-cases, please refer to our [Testing Guide](./docs/TESTING.md).
 
 ## Project constraints and methodology
 
