@@ -3,6 +3,11 @@
  *
  */
 
+let userBranchId = null;
+let stockData = [];
+const stockListEl = document.getElementById("stock-list");
+
+// ============== 1. Initializing page (checks auth+loaduserinfo+stocks) ===================
 async function init() {
   checkAuth();
 
@@ -30,7 +35,7 @@ async function init() {
   await loadStock();
 }
 
-// ============== 3. Provides a fetch wrapper to automatically use authn token ===================
+// ============== 2. Provides a fetch wrapper automate token injection in requests ===================
 async function apiFetch(url, options = {}) {
     const token = localStorage.getItem("token");
     
@@ -54,19 +59,7 @@ async function apiFetch(url, options = {}) {
     return response;
 }
 
-
-const stockListEl = document.getElementById("stock-list");
-let stockData = [];
-
-function escapeHtml(str) {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
+// ============== 3. Generates the list of products in stock ===================
 function renderStock() {
   if (!stockListEl) return;
   stockListEl.innerHTML = "";
@@ -106,23 +99,66 @@ function renderStock() {
   });
 }
 
-async function adjustStock(productId, delta) {
-  const item = stockData.find((p) => p.id === productId);
-  if (!item) return;
+// async function adjustStock(productId, amount, action) {
+//   const endpoint = `/branches/${currentBranchId}/stock/${action}`;
+//   
+//   const response = await apiFetch(endpoint, {
+//     method: "POST",
+//     body: JSON.stringify({
+//       product_id: productId,
+//       amount: amount
+//     })
+//   });
+// 
+//   if (!response) return;
+// 
+//   if (response.ok) {
+//     await loadStocks(); // Rechargement simple et propre de la liste
+//   } else {
+//     const errorData = await response.json();
+//     alert(`Erreur : ${errorData.detail || "Opération impossible"}`);
+//   }
+// }
 
-  const newQuantity = item.quantity + delta;
-  if (newQuantity < 0) {
-    alert("La quantité en stock ne peut pas devenir négative.");
-    return;
+// ============== 4a. Send stock change instruction - Add ===================
+async function addStock(productId, amount) {
+  if (!userBranchId) return;
+
+  const response = await apiFetch(`/branches/${userBranchId}/stock/add`, {
+    method: "POST",
+    body: JSON.stringify({ product_id: productId, amount: amount }),
+  });
+
+  if (!response) return;
+
+  if (response.ok) {
+    await loadStock();
+  } else {
+    const err = await response.json();
+    alert(`Erreur : ${err.detail || "Impossible d'ajouter le stock."}`);
   }
-
-  // TODO : remplacer par un vrai appel POST /api/stock/add ou
-  // /api/stock/remove vers le Backoffice une fois l'endpoint prêt.
-  // Pour l'instant, mise à jour locale uniquement (mode mock).
-  item.quantity = newQuantity;
-  renderStock();
 }
 
+// ============== 4b. Send stock change instruction - Remove ===================
+async function removeStock(productId, amount) {
+  if (!userBranchId) return;
+
+  const response = await apiFetch(`/branches/${userBranchId}/stock/remove`, {
+    method: "POST",
+    body: JSON.stringify({ product_id: productId, amount: amount }),
+  });
+
+  if (!response) return;
+
+  if (response.ok) {
+    await loadStock();
+  } else {
+    const err = await response.json();
+    alert(`Erreur : ${err.detail || "Impossible de retirer le stock."}`);
+  }
+}
+
+// ============== 5. Loading stock data from db API ===================
 async function loadStock() {
   if (!userBranchId) return;
 
@@ -141,41 +177,58 @@ async function loadStock() {
   }
 }
 
-function addNewProductStock(productId, quantity) {
-  const existing = stockData.find((p) => p.id === productId);
-  if (existing) {
-    // Le produit est déjà en stock dans cette branche : on incrémente au
-    // lieu de créer une deuxième ligne pour le même produit.
-    adjustStock(productId, quantity);
-    return;
-  }
+// Superceded by the function below directly in form listener.
+// function addNewProductStock(productId, quantity) {
+//   const existing = stockData.find((p) => p.id === productId);
+//   if (existing) {
+//     // Le produit est déjà en stock dans cette branche : on incrémente au
+//     // lieu de créer une deuxième ligne pour le même produit.
+//     adjustStock(productId, quantity);
+//     return;
+//   }
+// 
+//   // TODO : en vrai, le Backoffice doit d'abord vérifier que ce produit
+//   // existe réellement (via l'API Produit, à travers le serveur MCP ou un
+//   // appel direct côté Backoffice) avant de créer une ligne de stock, et
+//   // renvoyer nom/catégorie/fournisseur depuis cette vérification plutôt
+//   // que depuis un catalogue local comme ici.
+//   const catalogEntry = MOCK_CATALOG[productId] || {
+//     name: `Produit #${productId} (non reconnu en mode mock)`,
+//     category: "Inconnue",
+//     supplier: "Inconnu",
+//   };
+// 
+//   stockData.push({ id: productId, quantity, ...catalogEntry });
+//   renderStock();
+// }
 
-  // TODO : en vrai, le Backoffice doit d'abord vérifier que ce produit
-  // existe réellement (via l'API Produit, à travers le serveur MCP ou un
-  // appel direct côté Backoffice) avant de créer une ligne de stock, et
-  // renvoyer nom/catégorie/fournisseur depuis cette vérification plutôt
-  // que depuis un catalogue local comme ici.
-  const catalogEntry = MOCK_CATALOG[productId] || {
-    name: `Produit #${productId} (non reconnu en mode mock)`,
-    category: "Inconnue",
-    supplier: "Inconnu",
-  };
-
-  stockData.push({ id: productId, quantity, ...catalogEntry });
-  renderStock();
-}
-
-document.getElementById("new-stock-form").addEventListener("submit", (event) => {
+document.getElementById("new-stock-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const idInput = document.getElementById("new-product-id");
   const qtyInput = document.getElementById("new-product-qty");
+
   const productId = parseInt(idInput.value, 10);
   const quantity = parseInt(qtyInput.value, 10);
-  if (!productId || !quantity || quantity <= 0) return;
 
-  addNewProductStock(productId, quantity);
+  if (!productId || !quantity || productId <= 0 || quantity <= 0) {
+    alert("Veuillez saisir un ID produit valide et une quantité strictement positive.");
+    return;
+  }
+
+  // Envoie la requête d'ajout directement à l'API backend
+  await addStock(productId, quantity);
+
   idInput.value = "";
   qtyInput.value = "1";
 });
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
 
 document.addEventListener("DOMContentLoaded", init);
