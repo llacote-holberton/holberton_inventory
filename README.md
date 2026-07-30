@@ -141,7 +141,7 @@ You can also check the logs of the containers by doing the following command, wi
 
 Finally, you can monitor the live real-time memory and CPU consumption of all running containers across your Hbntory stack by executing:
 ```
-docker stats
+docker compose stats
 ```
 Or just a snapshot of it at given time with `--no-stream` option added (`docker stats --no-stream`).
 
@@ -205,33 +205,28 @@ Simple management and query of product stocks through the combination of a persi
 
 As Hbntory was designed and built within tight time constraints as a pedagogical proof-of-concept, certain trade-offs and architectural compromises were made.
 
----
 
 #### AI Assistant & MCP Integration
 - **Stateless Chat Session**: The AI agent currently operates statelessly—each request is processed independently without conversational memory. Complex multi-turn follow-up queries (e.g., *"Which computers are in Toulouse?"* followed by *"What about Paris?"*) are not supported natively yet.
 - **Partial Entity Enrichment in Bulk Queries**: Large-scale summary queries (like fetching the full multi-branch catalog) rely heavily on raw database IDs. The AI agent may return list outputs containing Product IDs without automatically cross-referencing names and supplier details for every single item.
 - **Model-Dependent Performance**: AI response latency, reasoning quality, and tool-calling execution accuracy are strictly bound to the capabilities of the selected LLM (e.g., lightweight local models vs. commercial frontier models).
 
----
 
 #### Architecture & Real-Time Engine
 - **Single-Node Pub/Sub Scope**: The real-time SSE engine relies on Python's in-memory `asyncio.Queue` within a single process. It does not support horizontal scaling across multiple Backoffice API instances (which would require a distributed broker like Redis Pub/Sub or RabbitMQ).
 - **Resource Footprint**: Running 6 microservice containers simultaneously requires a moderately powerful host machine (recommended: at least 4GB of free RAM and multi-core CPU).
 
----
 
 #### Security & Production Readiness
 - **Proof-of-Concept Security Model**: While basic JWT authentication, RBAC, and API keys are implemented, the overall system has not undergone security audits. Potential production vulnerabilities remain open (e.g., unencrypted HTTP between internal container networks, lack of request rate-limiting/throttling, and basic CORS policies).
 - **Database Schema Lifecycle**: Database initialization relies on raw static `.sql` scripts. There is currently no database migration tool integrated (such as Alembic) to handle dynamic schema evolution.
 
----
 
 #### Testing & Code Coverage
 - **Incomplete Backend Test Suite**: Endpoints and features developed in later phases (e.g., recent user management and stock assignment endpoints) currently lack full unit and integration test coverage.
 - **Absence of Front-End Automation**: The HTML5/Vanilla JS frontend has no automated end-to-end (E2E) or component testing suite (e.g., Cypress, Playwright, or Jest).
 - **No Automated LLM Benchmarking**: Evaluation of AI tool-calling reliability and response safety is currently done through manual prompt testing.
 
----
 
 ## Examples of use
 
@@ -347,7 +342,7 @@ Here are all the stocks across the network:
 ```
 
 
-### Mised questions
+### Mixed questions
 Question: `If I want to buy 3 HB-MON-2102 and as many HB-KBD-4102, which branches should I visit? `
 Answer: `To buy 3 units of HB-MON-2102 and as many HB-KBD-4102 as possible, you should visit **branch 5**, which has 24 monitors and 888 keyboards in stock — more than enough for both items in one stop.`
 
