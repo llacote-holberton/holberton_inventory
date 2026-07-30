@@ -49,6 +49,8 @@ async function init() {
   await displayUserInfo(userData);
 
   await loadStock();
+
+  connectStockSSE(userBranchId);
 }
 
 // Helper pour afficher les infos utilisateur et le nom de sa branche
@@ -377,6 +379,54 @@ function setupClientWebLink() {
 
   aiLink.href = `${protocol}//${host}:${port}/index.html`;
 }
+
+// Variable globale pour éviter de cumuler plusieurs connexions
+let stockEventSource = null;
+
+function connectStockSSE(branchId) {
+  if (stockEventSource) {
+    stockEventSource.close();
+  }
+
+  stockEventSource = new EventSource(`/branches/${branchId}/stocks/stream`);
+
+  stockEventSource.onmessage = (event) => {
+    try {
+      const update = JSON.parse(event.data); // Ex: { product_id: 4, quantity: 12 }
+
+      // Update des données locales en mémoire
+      const localItem = stockData.find((s) => s.product_id === update.product_id);
+      if (localItem) {
+        localItem.quantity = update.quantity;
+      }
+
+      // Recherche de l'élément à l'écran
+      const qtySpan = document.querySelector(`[data-product-id="${update.product_id}"] .current`);
+
+      if (qtySpan) {
+        // Mise à jour du texte avec le bon format
+        qtySpan.textContent = `Quantité actuelle : ${update.quantity}`;
+
+        // Gestion du style en cas de rupture
+        if (update.quantity === 0) {
+          qtySpan.classList.add("zero");
+        } else {
+          qtySpan.classList.remove("zero");
+        }
+      } else {
+        // Si la carte n'existait pas encore à l'écran, recharger tout le stock
+        if (typeof loadStock === "function") loadStock();
+      }
+    } catch (err) {
+      console.error("Erreur lors du traitement du message SSE :", err);
+    }
+  };
+
+  stockEventSource.onerror = (err) => {
+    console.warn("Connexion SSE interrompue. Reconnexion automatique...", err);
+  };
+}
+
 
 document.addEventListener("DOMContentLoaded", () => {
   setupClientWebLink();

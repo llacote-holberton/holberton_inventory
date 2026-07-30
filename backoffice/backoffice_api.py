@@ -202,23 +202,13 @@ def get_branch_stocks_route(
 # Will be hoisted back to top during "code cleaning phase".
 from api_models import StockAddIn
 @app.post("/branches/{branch_id}/stock/add", response_model=StockOut)
-def add_stock_route(
+async def add_stock_route(  # Needs to be made async to allow SSE
     branch_id: int,
-    # Instead of plain json and manual validation in body...
-    # product_id: int,
-    # amount: int,
-    # It's simpler and more robust to delegate to a Pydantic model
     payload: StockAddIn,
     db: Session = Depends(get_db),
     manager: dict = Depends(require_manager),
 ):
     m_id = manager.get("branch_id")
-    # NOTE: attempt to convert m_id to int not done immediately
-    #   to avoid an early 500 -> 422 Response if not convertable.
-    # No need to convert branch_id either, already done by Pydantic.
-    #   Only risk is value in JWT being incompatible (ex "hello")
-    #   but since it comes from our own app we consider the "risk"
-    #     is acceptable.
     if m_id is None or int(m_id) != branch_id:
         raise HTTPException(
             status_code=403,
@@ -231,12 +221,16 @@ def add_stock_route(
         branch_id=branch_id,
         amount=payload.amount
     )
+
+    # Adding an "update event" push as SSE
+    await notifier.notify(branch_id=branch_id, product_id=payload.product_id, quantity=new_quantity)
+
     return {"branch_id": branch_id, "product_id": payload.product_id, "quantity": new_quantity}
 
 
 from api_models import StockRemoveIn
 @app.post("/branches/{branch_id}/stock/remove", response_model=StockOut)
-def remove_stock_route(
+async def remove_stock_route(  # 👈 'async def' indispensable pour 'await'
     branch_id: int,
     payload: StockRemoveIn,
     db: Session = Depends(get_db),
@@ -257,20 +251,60 @@ def remove_stock_route(
             product_id=p_id,
             amount=payload.amount
         )
-    # Row exists but not enough stock to substract without going below 0.
     except crud.InsufficientStockError as exc:
         insufficient_msg = (
             f"Insufficient stock: tried to substract {payload.amount}."
             f" But only {exc.available} available!"
         )
         raise HTTPException(status_code=400, detail=insufficient_msg)
-    # Row didn't exist.
+
     if new_quantity is None:
         nostock_msg = f"No stock found in branch {branch_id} for product {p_id}"
         raise HTTPException(status_code=404, detail=nostock_msg)
-    # Everything went well.
+
+    # Adding an "update event" push as SSE
+    await notifier.notify(branch_id=branch_id, product_id=p_id, quantity=new_quantity)
+
     return {"branch_id": branch_id, "product_id": p_id, "quantity": new_quantity}
 
+
+import asyncio
+import json
+from collections import defaultdict
+from fastapi.responses import StreamingResponse
+
+class StockNotifier:
+    def __init__(self):
+        # Creates a dictionary of queues, id being branch_id, 
+        #   on item per browser tab connected
+        self.listeners: dict[int, set[asyncio.Queue]] = defaultdict(set)
+
+    async def subscribe(self, branch_id: int):
+        queue = asyncio.Queue()
+        self.listeners[branch_id].add(queue)
+        try:
+            while True:
+                # Attend un nouvel événement de stock
+                data = await queue.get()
+                yield f"data: {data}\n\n"
+        except asyncio.CancelledError:
+            # Nettoyage à la déconnexion du client
+            self.listeners[branch_id].remove(queue)
+
+    async def notify(self, branch_id: int, product_id: int, quantity: int):
+        payload = json.dumps({"product_id": product_id, "quantity": quantity})
+        for queue in list(self.listeners[branch_id]):
+            await queue.put(payload)
+
+notifier = StockNotifier()
+
+# Route SSE pour écouter les changements de stock d'une branche
+@app.get("/branches/{branch_id}/stocks/stream")
+async def stream_branch_stocks(branch_id: int):
+    return StreamingResponse(
+        notifier.subscribe(branch_id),
+        media_type="text/event-stream"
+    )
 
 
 # =============== BACKOFFICE UI - Static pages ===============
