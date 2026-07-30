@@ -122,7 +122,7 @@ services:
       dockerfile: Dockerfile.ai_service
     container_name: ${COMPOSE_PROJECT_NAME}-ai-service
     ports:
-      - "${AI_SERVICE_PORT:-8003}:8003"
+      - "${AI_SERVICE_PORT:-8003}:${AI_SERVICE_PORT:-8003}"
     environment:
       - AI_SERVICE_PORT=${AI_SERVICE_PORT:-8003}
       # Name of docker service since we are within same network.
