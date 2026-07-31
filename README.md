@@ -545,7 +545,7 @@ To share a common vision and limit conflicts when pushing code, we applied a few
 - From the start of coding, never pushing directly to `dev`: every feature went through a Pull Request from a personal branch, reviewed and approved by the other teammate — allowing a fresh set of eyes on the code and a natural understanding of each other's work.
 - Testing features as they were coded.
 - Regularly reintegrating changes pushed to `dev` back into the personal branch, to keep the history as linear as possible and avoid conflicts down the road.
-- Occasional use of GitHub Issues and Wiki, which turned out to be unnecessary once our collaboration workflow was running smoothly.
+- Occasional use of GitHub Wiki to share brainstorming ideas and various questions/topics to dig, as well as storing documentation which was useful to us but not necessarily worth integrating into "final docs". And Github Issues to try and get a sense of how best to decompose all the implementation effort, although our constant communication and very short time constraints made us use Agile Kanban in a very light way, rather to keep some trace of what had been done rather than really "pushing information on project management to one another".
 - Main tools: Git and Visual Studio Code / Kate for writing and sharing code; various LLM for digging topics and writing tests against our code.
 
 ### Acknowledgments
