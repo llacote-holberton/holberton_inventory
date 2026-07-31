@@ -2,39 +2,44 @@
 
 ## Summary
 
-
 <details>
 <summary><b>Table of Contents (Click to expand)</b></summary>
 
 - [Summary](#summary)
 - [How to install and run](#how-to-install-and-run)
   - [Prerequisites](#prerequisites)
-  - [1. Downloading](#1-downloading)
-  - [2. Compiling](#2-compiling)
+  - [Configuring and running](#configuring-and-running)
 - [How to use](#how-to-use)
   - [Starting program](#starting-program)
   - [Usage overview](#usage-overview)
 - [Features and limitations](#features-and-limitations)
   - [Supported (v1.0)](#supported-v10)
-  - [Not supported (yet)](#not-supported-yet)
-  - [Accessible help](#accessible-help)
+  - [Not Supported (yet) & Known Limitations](#not-supported-yet--known-limitations)
 - [Examples of use](#examples-of-use)
   - [Valid examples](#valid-examples)
   - [Failing examples](#failing-examples)
 - [Technical information](#technical-information)
   - [General architecture](#general-architecture)
-  - [Process Flow](#process-flow)
-  - [Memory management](#memory-management)
+    - [Core design principles](#core-design-principles)
+    - [Main code structuration](#main-code-structuration)
+  - [Technical stack overview](#technical-stack-overview)
+  - [Communications overview](#communications-overview)
+  - [Process Flow for a request from end-user](#process-flow-for-a-request-from-end-user)
+    - [Backoffice...](#backoffice)
+    - [Frontoffice](#frontoffice)
+  - [Architecture macro diagram](#architecture-macro-diagram)
+  - [Memory management & Performance](#memory-management--performance)
 - [Testing](#testing)
 - [Project constraints and methodology](#project-constraints-and-methodology)
   - [Imposed constraints](#imposed-constraints)
-    - [Allowed Functions and System Calls](#allowed-functions-and-system-calls)
     - [Requirements](#requirements)
   - [Project methodology](#project-methodology)
   - [Acknowledgments](#acknowledgments)
 - [Technologies Used](#technologies-used)
 - [Authors](#authors)
 - [License](#license)
+
+</details>
 
 </details>
 
@@ -85,7 +90,7 @@ sudo usermod -aG docker $USER
 # Note: Log out and log back in for the group membership change to take effect.
 ```
 
-### 2. Configuring and running
+### Configuring and running
 
 Hbntory uses Docker Compose to orchestrate all microservices. Configuration is driven entirely through environment variables defined in a `.env` file at the root of the repository.
 
