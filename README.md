@@ -43,15 +43,16 @@
 <details>
 <summary>(Click for detailed information on prerequisites, download and installation/configuration/run steps)</b></summary>
 
-### Prerequisite
+### Prerequisites
 
 To run the Hbntory platform, **Docker** and **Docker Compose** are the only core system requirements. Because all services (Backoffice API, External Products API, MCP Server, AI Service, and Frontend) are fully containerized, you do not need to install Python, MySQL, or Node.js locally on your host system.
+
+Note however that if you want to run our integrated test suite locally or just want to run components without the whole Docker abstraction you'll need Python3 installed (you can refer to this [third-party tutorial](https://realpython.com/installing-python/)) along with all the libraries listed in the individual requirements (to have a list quickly, from a shell like Bash opened in project root you can run `find . -type f -name "requirements.txt" -exec cat {} + | tr -d '\r' | grep -v '^#' | sort -u`). Then just install them with pip.
 
 #### Additional Requirements:
 - **Git**: To clone the project repository.
 - **Modern Web Browser**: Chrome, Firefox, Edge, or Safari to access the Backoffice Web UI and AI Client.
 
----
 
 #### Installing Docker on your OS
 
@@ -88,7 +89,16 @@ sudo usermod -aG docker $USER
 
 Hbntory uses Docker Compose to orchestrate all microservices. Configuration is driven entirely through environment variables defined in a `.env` file at the root of the repository.
 
----
+#### Step 0: Retrieving project files
+
+If you have Git it is very quick and easy: open a shell like Bash where you want project to sit then type those commands.
+```
+git clone https://github.com/llacote-holberton/holberton_inventory.git
+cd holberton_inventory
+```
+
+Alternatively you can just download the [latest release zip](https://github.com/llacote-holberton/holberton_inventory/archive/refs/heads/main.zip) and extract it in your favorite file explorer then open the holberton_inventory.
+
 
 #### Step 1: Environment Configuration (one-shot)
 
@@ -159,20 +169,37 @@ If you want to completely and cleanly uninstall this project (or just restart it
 ## How to use
 
 ### Starting program
-* For a "one-shot manual execution": (all-in-one automatic demo, OPTIONAL ONLY IF WE HAVE ENOUGH TIME)
-* Otherwise run FIXME 
+
+Considering you fulfilled all preparation steps (confer above section) just this is enough, at project's root: `docker compose up --build -d`.
+This command starts all the containers: the MariaDB database, the external product API, the BackOffice, the FrontOffice, and the AI Service.
+Once the containers are running, the application is accessible via:
+- the BackOffice HTML interface, for internal users (admin / managers) (by default at url http://localhost:8000)
+- the FrontOffice interface, for anonymous customers, which triggers the AI agent when the submit button is clicked (by default at http://localhost:8080)
+
+
 
 ### Usage overview
-Once compiled (e.g. as an executable file shs.out) you can manually run it (confer [Starting program](#starting-program) section) to use it in interactive mode.  
-For examples of use please go to [Examples of use](#examples-of-use)
+
+On the Frontoffice side, the customer submits a request through the FrontOffice; it is forwarded to the AI Service, which relies on an agent (MiniMax 3) querying an MCP server to fetch produc
+t/stock information from the BackOffice and the external product API, then returns a response to the customer.
+
+On the BackOffice side, internal users manage stock (CRUD) via the HTML interface or the dedicated REST API, with real-time updates pushed to other sessions via Serve
+r-Sent Events.
+
+For concrete examples, see [Examples of use](#examples-of-use).
 
 ## Features and limitations
 
-As this was a short-timed and severely constrained project tailored for pedagogy first, it is simple by design.
+As this project was built under tight time constraints and with a pedagogical focus first, it remains intentionally simple in scope.
 
 ### Supported (v1.0)
 
-Simple management and query of product stocks through the combination of a persistent database to store stock informations, access-restricted web interfaces to manage stock for each company's store ('branch'), and a public interface for anyone to learn about products and their potential availability across branches.
+Functional features overview:
+- Per-branch stock management (viewing, updating) with a non-negative quantity constraint
+- Real-time stock updates on the BackOffice side via Server-Sent Events
+- Internal user authentication with two roles: `admin` and `manager`
+- Product lookup by an AI agent (MiniMax 3) via a dedicated MCP server
+- Product catalog lookup via a containerized external API
 
 #### Multi-Branch & Inventory Core Management
 - **Branch-Specific Stock Tracking**: Manage and inspect stock quantities independently per physical or virtual store branch.
@@ -366,6 +393,8 @@ This section only present the high-level information. For more details on techni
 
 ### General architecture
 
+#### Core design principles
+
 The project relies on following core principles.
 
 1/ Business data is split in two parts: a catalog of products provided by a third party, exposed through an API; and a database managed by identified humans to affect stocks of products available for selling in various stores (named "branches").
@@ -376,13 +405,57 @@ The project relies on following core principles.
 
 4/ As this application as a whole requires several components to run on a group of ports, it provides a Docker composition file to provide a quick & easy way to set up all services in a cohesive way.
 
+#### Main code structuration
+
+The project is built around three main components:
+- **BackOffice** — the sole source of truth for product and stock knowledge, for both internal users (HTML interface) and the AI agent. Relies on an ORM interface for
+ CRUD operations, an HTTP client to the external product API, and an HTTP server exposing HTML pages, REST endpoints, and an SSE stream.
+- **FrontOffice** — the sole entry point for anonymous visitors; it never talks directly to the BackOffice, only through the AI Service.
+- **AI Service** — the bridge between the FrontOffice and the BackOffice, combining an AI agent (MiniMax 3) and an MCP server that provides the tools needed to query 
+product/stock information.
+
 ### Technical stack overview
 
 Python and related libraries (SQLAlchemy, LiteLLM, Google ADK, Fast MCP, Fast API): for creating the micro-services exposing each component on network.
 MariaDB: to manage data in a SQL-based relational database.
 Docker: to define each micro-service as a self-sufficient app and coordinate their uses and inter-communications.
 
-### Process Flow
+### Communications overview
+
+```mermaid
+
+flowchart TB
+    Client["Web client<br/>Anonymous users"] -->|REST / SSE| IA["AI Query Service<br/>MiniMax 3 agent + MCP client"]
+    Internal["Internal users<br/>Admin, managers"] -->|Authenticated HTTP| BO["Backoffice<br/>Auth, stock management"]
+    IA -->|"MCP (streamable-http)"| MCP["Product MCP server<br/>Bridge to the product API"]
+    BO -->|SQLAlchemy| DB["Database<br/>Users, branches, stock"]
+    MCP -->|"GET /api/stock (read-only)"| BO
+    MCP -->|"HTTP (list / details)"| API["External product API<br/>Catalog, Docker container"]
+
+```
+
+### Process Flow for a request from end-user
+
+```mermaid
+sequenceDiagram
+    participant C as Web client
+    participant FO as FrontOffice
+    participant IA as AI Service (MiniMax 3 agent)
+    participant MCP as Product MCP server
+    participant BO as Backoffice
+    participant API as External product API
+    C->>FO: Submits a request
+    FO->>IA: Calls the AI endpoint
+    IA->>MCP: Tool request (MCP)
+    MCP->>API: Catalog lookup
+    MCP->>BO: GET /api/stock (read-only)
+    BO-->>MCP: Stock data
+    API-->>MCP: Product data
+    MCP-->>IA: Aggregated result
+    IA-->>FO: Generated response
+    FO-->>C: Response displayed
+```
+
 
 For detailed examples of sequence diagrams, please confer the "Sequence Diagram" section in the Architecture document.
 
@@ -436,36 +509,34 @@ This project has been realized in compliance with all business specifications an
 
 #### Requirements
 
-Confer PROJECT.md
+Confer `PROJECT.md`
 
 ### Project methodology
 
-To ensure we shared the vision and limit conflicts when pushing code we enforced a few simple rules throughout the duration.
-1. Starting with the Flowchart to understand the global architecture and identify potential challenges.
-2. As soon as starting to code, never push directly on dev but make a Pull Request from "personal branch", which had to be checked and approved by peer: this allowed fresh eyes to view code and detect potential flaws while also making reviewer understand and "learn" about peer's code naturally.
-3. Test features as we code them.
-4. Reintegrate changes pushed onto dev inside personal branch as soon as made available to keep history as "single-lined" as possible and avoid creating conflicts down the road.
-
-We also used Github's tickets and Wiki scarcely, as we realized a few days in we didn't need it as our communication and collaboration workflow was working fine without them.
-
-Beyond Git and Visual Studio Code / Kate as our main tools for code writing and sharing, we occasionally used online collaboration and testing tools for brainstorms, https://codeshare.io/ and https://www.onlinegdb.com/online_c_compiler respectively.
+To share a common vision and limit conflicts when pushing code, we applied a few simple rules throughout the project:
+- Starting with an architecture flowchart to understand the overall structure and identify potential challenges early on.
+- From the start of coding, never pushing directly to `dev`: every feature went through a Pull Request from a personal branch, reviewed and approved by the other teammate — allowing a fresh set of eyes on the code and a natural understanding of each other's work.
+- Testing features as they were coded.
+- Regularly reintegrating changes pushed to `dev` back into the personal branch, to keep the history as linear as possible and avoid conflicts down the road.
+- Occasional use of GitHub Issues and Wiki, which turned out to be unnecessary once our collaboration workflow was running smoothly.
+- Main tools: Git and Visual Studio Code / Kate for writing and sharing code; various LLM for digging topics and writing tests against our code.
 
 ### Acknowledgments
 
 - Holberton School for the project guidelines
-- Betty style guide contributors
-- All peer reviewers and testers
+- All peer reviewers and testers: Barat Erwan, Lacôte Laurent, Lages Yoann
 
 ## Technologies Used
 
 <p align="left">
-    <img src="https://img.shields.io/badge/python-3670A0&style=for-the-badge" alt="Python badge">
+    <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=FFD43B" alt="Python badge">
     <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker badge">
     <img src="https://img.shields.io/badge/GIT-f05032?logo=git&logoColor=white&style=for-the-badge" alt="Git badge">
     <img src="https://img.shields.io/badge/GITHUB-181717?logo=github&logoColor=white&style=for-the-badge" alt="GitHub badge">
     <img src="https://img.shields.io/badge/KDE-blue?logo=kde&logoColor=white&style=for-the-badge" alt="KDE badge">
 </p>
 
+Plus Nvidia's MiniMax LLM (by default) and Python libraries: FastAPI, FastMCP, HttpX(2), SQLAlchemy, Pytest along with their own dependencies.
 
 ## Authors
 
