@@ -15,6 +15,12 @@ services:
       - MARIADB_DATABASE=${DB_HBNTORY_BASENAME}
       - MARIADB_USER=${DB_HBNTORY_USER_ID}
       - MARIADB_PASSWORD=${DB_HBNTORY_USER_PWD}
+      # Additional variables to control whether/which initial data is automatically created.
+      - INIT_MODE=${INIT_MODE:-minimal}
+      # NO fallback for security reasons (technically there is a fallback in actual seeding script though
+      #   but please forget that and actually provide a proper id and password ;))
+      - INITIAL_ADMIN_USER=${INITIAL_ADMIN_USER}
+      - INITIAL_ADMIN_HASH=${INITIAL_ADMIN_HASH}
     ports:
       # Note: "internal port" MUST be fixed because it is the one configured by default by MariaDB
       # Making it dynamic would require creating a dockerfile just for that. No identified benefit.

@@ -129,8 +129,31 @@ Before launching the stack, you must update the following placeholder values in 
 
 For more information on LLM configuration specifically, please confer the [Annex 1: choosing your LLM model](docs/ANNEX-1.md).
 
+##### Database Initialization Modes (`INIT_MODE`)
 
-# Step 2: Manually managing the environment (repeatable)
+Hbntory supports two database seeding modes upon the initial database volume creation:
+
+1. **`demo` (Default)**: Populates the database with full sample data (pre-configured users, branches, and sample stock records) to easily demonstrate all application features[cite: 2].
+2. **`minimal`**: Sets up a clean environment with **only one initial Administrator account** and a custom list of branches.
+
+To configure seeding in your `.env` file:
+- `INIT_MODE`: Set to either `demo` or `minimal` (default: `demo`).
+
+Variables to define for the `minimal` initialization mode:
+- `INITIAL_ADMIN_USER`: Username for the initial admin account (default: `hbntory_admin`).
+- `INITIAL_ADMIN_HASH`: Custom Bcrypt hash for the initial admin password (use a CLI command if you have or https://bcrypt.online/).  
+    If omitted, defaults to a fallback hash corresponding to password `Holberton Inventory Admin` (but please rather generate one).
+- `INITIAL_BRANCHES`: Comma-separated list of branches to create in `minimal` mode (e.g., `INITIAL_BRANCHES="Paris, Toulouse Esquirol, Lyon"`). Fallback value will be only Paris and Toulouse. Please ensure you separate branch names with commas and avoid special characters.
+
+#### Switching Database Seeding Modes (`demo` ↔ `minimal`)
+
+Since MariaDB initialization scripts only run upon the **first creation** of the database volume, changing `INIT_MODE` in your `.env` file requires clearing existing database volumes:
+
+1. Update `INIT_MODE` (and any related variables) in your `.env` file.
+2. Stop the stack and remove only the database volume: `./stop.sh && docker volume rm hbntory_stock_db_data`
+3. Restart the stack with `./start.sh` (this will automatically rebuild the missing service and volume).
+
+# Step 2: Manually managing the application (repeatable)
 
 NOTE: all the following commands expect you to run them from the project's root so the 'compose' command automatically finds the related docker-compose.yml file.
 Otherwise you will need to specify the path to the compose file.
