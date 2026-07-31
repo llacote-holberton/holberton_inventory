@@ -45,7 +45,15 @@ VALUES
 --   will end with "manager" role and NULL branch
 INSERT IGNORE INTO users (user_name, password_hash)
 VALUES
-    ('newbie', 'badpass123456');
+    -- 'newbie': hash matches 'badpass123456'
+    ('newbie', "$2y$10$3F2O/no7ywRtXin.WoeK1ezyj1iwEiiIt6518ejCSM.7.rJgExP6O");
+
+
+-- Specially inserts a "deactivated user" to directly have a visual check
+INSERT IGNORE INTO users (user_name, password_hash, is_active)
+VALUES
+    -- 'retired': hash matches 'missing you'
+    ('retired', "$2y$10$OQCEQxTSCY1Vr9mhojHMAOS0vIABbe2ZDrcbCFz4aFG.tMKDEItKi", 0);
 
 -- ----------------------------------------------------------------------------
 -- Task 2: (re)filling stocks table
@@ -72,8 +80,18 @@ VALUES
     -- SHOWS that (for now) quantity 0 is allowed, will be inserted
     -- Product id 6 sku HB-KBD-4101 in Caussade
     (4, 6, 0),
+    -- USED to check aesthetics with big numbers
+    (5,1,100015),
+
     -- INVALID ENTRY to double check backoffice behaviour (inexisting product id)
-    (1, 666, 45)
+    (1, 666, 45),
+    -- Other random entries just to have a longer list of stocks
+    (5,3,1),
+    (5,4,24),
+    (5,7,888),
+    (5,18,29),
+    (5,32,2),
+    (5,35,65)
 ;
 
 
