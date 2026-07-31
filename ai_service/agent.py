@@ -36,6 +36,14 @@ LLM_MODEL_API_KEY = os.getenv("LLM_MODEL_API_KEY")
 if LLM_MODEL_API_KEY:
     os.environ.setdefault("NVIDIA_NIM_API_KEY", LLM_MODEL_API_KEY)
 
+# Additional variables just for the case where a local LLM through ollama is chosen.
+# As with nvidia minimax, ollama/xxx is a family of models which trigger the lookup
+#   for the following variables.
+# Dynamically setting host name depending on whether we are "in docker" or not.
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "ollama" if MCP_HOST == "mcp-server" else "127.0.0.1")
+OLLAMA_PORT = os.getenv("OLLAMA_PORT", "11434")
+os.environ.setdefault("OLLAMA_API_BASE", os.getenv("OLLAMA_API_BASE", f"http://{OLLAMA_HOST}:{OLLAMA_PORT}"))
+
 
 APP_NAME = "ai_query_service"
 

@@ -116,6 +116,19 @@ services:
         - internal-api
       restart: unless-stopped
 
+  ollama:
+    # Won't be started by default must either target it with docker compose up option
+    # --profile ollama for a "one-shot" try OR define the COMPOSE_PROFILES=ollama
+    # environment variable in local .env for permanent association.
+    profiles: ["ollama"]
+    image: ollama/ollama:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-ollama
+    ports:
+      - "${OLLAMA_PORT:-11434}:${OLLAMA_PORT:-11434}"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
   ai-service:
     build:
       context: ${PWD}/ai_service
@@ -133,6 +146,10 @@ services:
       # Model agnostic configuration (name and if need be API key)
       - LLM_MODEL_NAME=${LLM_MODEL_NAME}
       - LLM_MODEL_API_KEY=${LLM_MODEL_API_KEY}
+      # Additional variables for when using local models with ollama
+      - OLLAMA_HOST=${OLLAMA_HOST:-ollama}
+      - OLLAMA_PORT=${OLLAMA_PORT:-11434}
+      - OLLAMA_API_BASE=http://${OLLAMA_HOST:-ollama}:${OLLAMA_PORT:-11434}
       # Used to tell Python to not output Warning level (only) messages
       # Useful because Google ADK will otherwise output several warnings during use
       # One at start because cannot connect to Google Cloud since we didn't configure
@@ -163,6 +180,8 @@ services:
 
 volumes:
   stock_db_data:
+  # Additional volume to hold local LLM models data.
+  ollama_data:
     # driver: local
     # driver_opts:
     #   type: none
