@@ -130,14 +130,23 @@ Before launching the stack, you must update the following placeholder values in 
 For more information on LLM configuration specifically, please confer the [Annex 1: choosing your LLM model](docs/ANNEX-1.md).
 
 
-# Step 2: Managing the environment (repeatable)
+# Step 2: Manually managing the environment (repeatable)
 
 NOTE: all the following commands expect you to run them from the project's root so the 'compose' command automatically finds the related docker-compose.yml file.
 Otherwise you will need to specify the path to the compose file.
 
 ## Starting
+
+**IMPORTANT** Please ensure you have an active internet connection at least for the first time you run the app, and expect some downloads of data of between 2go to 10Go depending on your chosen configuration (especially if you chose a local LLM model).
+
+### Automatically
+Just open a terminal at project root and run `./start.sh` (or possibly run it from your file explorer if your operating system will allow it).
+
+### Manually (for finer control)
 To build all container images and start all microservices, run:
-`docker compose up -d --build`
+`docker compose up -d --build` 
+The `-d` option lets you keep hand on your terminal.
+The `--build` one forces Docker to recreate images.
 
 *Warning* please note that if you choose a local agent, for now you will need to manually ask the service to pull your chosen model (ex for ornith) AFTER all services are up and running.
 `docker compose exec -t "ollama" ollama pull "ornith"`
@@ -165,26 +174,26 @@ Or just a snapshot of it at given time with `--no-stream` option added (`docker 
 
 
 ## Stopping
-To stop the stack without losing any information, just run this.
-`docker compose down`.
+
+To stop the stack without losing any information, just run this: `./stop.sh` (this technically runs `docker compose down` under the hood with all pertinent options).
 
 ## Deleting all information (containers AND database)
 
-If you want to completely and cleanly uninstall this project (or just restart it from scratch), you can simply do `docker compose down -v`. The -v option means "Volume deletion" and implies that the persistent storage for database will be deleted from your machine.
+If you want to completely and cleanly uninstall this project (or just restart it from scratch), you can simply do `./stop.sh --purge`. This runs `docker compose down -v` under the hood targeting all services (the -v option means "Volume deletion" and implies that the persistent storage for database and local models will be deleted from your machine).
 
 </details>
 
 ## How to use
 
-### Starting program
+### Starting / stopping program
 
-Considering you fulfilled all preparation steps (confer above section) just this is enough, at project's root: `docker compose up --build -d`.
+Considering you fulfilled all preparation steps (confer above section) just this is enough, at project's root: `start.sh`.
 This command starts all the containers: the MariaDB database, the external product API, the BackOffice, the FrontOffice, and the AI Service.
 Once the containers are running, the application is accessible via:
 - the BackOffice HTML interface, for internal users (admin / managers) (by default at url http://localhost:8000)
 - the FrontOffice interface, for anonymous customers, which triggers the AI agent when the submit button is clicked (by default at http://localhost:8080)
 
-
+To stop the app without losing data, just execute `stop.sh`. If you want to also delete the existing database and (if any) local models execute `stop.sh --purge` instead.
 
 ### Usage overview
 
