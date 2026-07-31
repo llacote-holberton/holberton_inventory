@@ -139,6 +139,9 @@ Otherwise you will need to specify the path to the compose file.
 To build all container images and start all microservices, run:
 `docker compose up -d --build`
 
+*Warning* please note that if you choose a local agent, for now you will need to manually ask the service to pull your chosen model (ex for ornith) AFTER all services are up and running.
+`docker compose exec -t "ollama" ollama pull "ornith"`
+
 **IMPORTANT** as project uses community provided images AND a public Github repository for one service (products-api), a working network connexion allowing access to internet is required whenever you use the option --build (and a decent bandwith like >=1.5Mo sec is recommended).
 
 What does it do?
