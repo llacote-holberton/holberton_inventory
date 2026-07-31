@@ -1,4 +1,4 @@
-# Holberton Inventory - A proof-of-concept of full-fledged application
+# Holberton Inventory
 
 ## Summary
 
@@ -35,156 +35,156 @@
 - [Technologies Used](#technologies-used)
 - [Authors](#authors)
 - [License](#license)
+# Holberton Inventory - A proof-of-concept of full-fledged application
 
-</details>
 
 ## How to install and run
 
-FIXME
+### Prerequisites
 
-<details>
-<summary>(Click for detailed information on prerequisites, download and installation/configuration/run steps)</b></summary>
+- Docker and Docker Compose installed
+- A `.env` file with the required connection variables (database, AI model API key, etc.) — *FIXME: list the exact expected variables*
 
-### Prerequisite
+### Installation
 
-FIXME (Docker, Python, SQLite/MariaDb/Postgresl)
+```bash
+git clone <repo-url>
+cd <repo-name>
+docker compose up --build
+```
 
-### 1. Downloading
-If you have git and are comfortable with command line,
-  you can simply open one and go to the directory in which you want calculator to be.
-  Then run (without the quotes) `"git clone https://github.com/llacote-holberton/holberton_inventory.git"`
-Otherwise you can simply download a zip containing all projects file
-  by following [this url](https://github.com/llacote-holberton/holberton_inventory/archive/refs/heads/main.zip)
-  then unfolding it where you want on your computer.
+This command starts all the containers: the MariaDB database, the external product API, the BackOffice, the FrontOffice, and the AI Service.
 
-### 2. Compiling / Configuring
-
-FIXME
-
-
-</details>
+*FIXME: specify any database configuration/migration steps needed before the first run.*
 
 ## How to use
 
 ### Starting program
-* For a "one-shot manual execution": (all-in-one automatic demo, OPTIONAL ONLY IF WE HAVE ENOUGH TIME)
-* Otherwise run FIXME 
+
+Once the containers are running, the application is accessible via:
+- the BackOffice HTML interface, for internal users (admin / managers)
+- the FrontOffice interface, for anonymous customers, which triggers the AI agent when the submit button is clicked
+
+
 
 ### Usage overview
-Once compiled (e.g. as an executable file shs.out) you can manually run it (confer [Starting program](#starting-program) section) to use it in interactive mode.  
-For examples of use please go to [Examples of use](#examples-of-use)
+
+The customer submits a request through the FrontOffice; it is forwarded to the AI Service, which relies on an agent (MiniMax 3) querying an MCP server to fetch product/stock information from the BackOffice and the external product API, then returns a response to the customer.
+
+On the BackOffice side, internal users manage stock (CRUD) via the HTML interface or the dedicated REST API, with real-time updates pushed to other sessions via Server-Sent Events.
+
+For concrete examples, see [Examples of use](#examples-of-use).
 
 ## Features and limitations
 
-As this was a short-timed and severely constrained project tailored for pedagogy first, it is simple by design.
+As this project was built under tight time constraints and with a pedagogical focus first, it remains intentionally simple in scope.
 
 ### Supported (v1.0)
-- FIXME
+
+- Per-branch stock management (viewing, updating) with a non-negative quantity constraint
+- Internal user authentication with two roles: `admin` and `manager`
+- Product lookup by an AI agent (MiniMax 3) via a dedicated MCP server
+- Real-time stock updates on the BackOffice side via Server-Sent Events
+- Product catalog lookup via a containerized external API
 
 
 
-### Not supported (yet)
-FIXME
+## Accessible help
 
-### Accessible help
-
-FIXME (OPTIONAL built-in doc)
-
-## Examples of use
-
-<details>
-<summary>(Click to expand)</b></summary>
-
-### Valid examples
-
-FIXME
-
-| Use case                                         | Prompt                              | Answer              |
-|--------------------------------------------------|-------------------------------------------|---------------|
-| Listing all products of a branch      | `echo "ls -latr /tmp" | ./hsh`            |
-
-
-### Failing examples
-Couple of use-cases which are not supported.
-
-| Use case                                                                        | Command line                                  |
-|---------------------------------------------------------------------------------|-----------------------------------------------|
-| FIXME   | FIXME |
-
-
-</details>
-
-## Technical information
+(optional built-in documentation)*
 
 ### General architecture
 
-FIXME
+The project is built around three main components:
+
+- **BackOffice** — the sole source of truth for product and stock knowledge, for both internal users (HTML interface) and the AI agent. Relies on an ORM interface for CRUD operations, an HTTP client to the external product API, and an HTTP server exposing HTML pages, REST endpoints, and an SSE stream.
+- **FrontOffice** — the sole entry point for anonymous visitors; it never talks directly to the BackOffice, only through the AI Service.
+- **AI Service** — the bridge between the FrontOffice and the BackOffice, combining an AI agent (MiniMax 3) and an MCP server that provides the tools needed to query product/stock information.
+
+```mermaid
+flowchart TB
+    Client["Web client<br/>Anonymous users"] -->|REST / SSE| IA["AI Query Service<br/>MiniMax 3 agent + MCP client"]
+    Internal["Internal users<br/>Admin, managers"] -->|Authenticated HTTP| BO["Backoffice<br/>Auth, stock management"]
+    IA -->|"MCP (streamable-http)"| MCP["Product MCP server<br/>Bridge to the product API"]
+    BO -->|SQLAlchemy| DB["Database<br/>Users, branches, stock"]
+    MCP -->|"GET /api/stock (read-only)"| BO
+    MCP -->|"HTTP (list / details)"| API["External product API<br/>Catalog, Docker container"]
+```
 
 ### Process Flow
 
-FIXME Mermaid diagram
+```mermaid
+sequenceDiagram
+    participant C as Web client
+    participant FO as FrontOffice
+    participant IA as AI Service (MiniMax 3 agent)
+    participant MCP as Product MCP server
+    participant BO as Backoffice
+    participant API as External product API
 
-For a deep dive into the inner workings and design choices, including PATH resolution and function-level architecture, please read our dedicated [Architecture](./ARCHITECTURE.md) page.
+    C->>FO: Submits a request
+    FO->>IA: Calls the AI endpoint
+    IA->>MCP: Tool request (MCP)
+    MCP->>API: Catalog lookup
+    MCP->>BO: GET /api/stock (read-only)
+    BO-->>MCP: Stock data
+    API-->>MCP: Product data
+    MCP-->>IA: Aggregated result
+    IA-->>FO: Generated response
+    FO-->>C: Response displayed
+```
 
-### Memory management & Performance
-
-FIXME (evaluation of average memory used by all docker containers )
+For a deeper dive into the design choices, see the dedicated [Architecture](#) page.
 
 
-## Testing
+### Testing
 
-FIXME OPTIONAL if we have enough time to really make tests
 For detailed instructions on how to run our manual and automated test suites, please refer to our [Testing Guide](./TESTING.md).
 
 ## Project constraints and methodology
 
 ### Imposed constraints
 
-This project has been realized in compliance with all business specifications and technical constraints detailed in the [Project context](./PROJECT.md)
+This project was carried out in compliance with all business specifications and technical constraints detailed in the project context.
 
-#### Requirements
+### Requirements
 
-Confer PROJECT.md
+Confer `PROJECT.md`.
 
 ### Project methodology
 
-To ensure we shared the vision and limit conflicts when pushing code we enforced a few simple rules throughout the duration.
-1. Starting with the Flowchart to understand the global architecture and identify potential challenges.
-2. As soon as starting to code, never push directly on dev but make a Pull Request from "personal branch", which had to be checked and approved by peer: this allowed fresh eyes to view code and detect potential flaws while also making reviewer understand and "learn" about peer's code naturally.
-3. Test features as we code them.
-4. Reintegrate changes pushed onto dev inside personal branch as soon as made available to keep history as "single-lined" as possible and avoid creating conflicts down the road.
+To share a common vision and limit conflicts when pushing code, we applied a few simple rules throughout the project:
 
-We also used Github's tickets and Wiki scarcely, as we realized a few days in we didn't need it as our communication and collaboration workflow was working fine without them.
+- Starting with an architecture flowchart to understand the overall structure and identify potential challenges early on.
+- From the start of coding, never pushing directly to `dev`: every feature went through a Pull Request from a personal branch, reviewed and approved by the other teammate — allowing a fresh set of eyes on the code and a natural understanding of each other's work.
+- Testing features as they were coded.
+- Regularly reintegrating changes pushed to `dev` back into the personal branch, to keep the history as linear as possible and avoid conflicts down the road.
+- Occasional use of GitHub Issues and Wiki, which turned out to be unnecessary once our collaboration workflow was running smoothly.
+- Main tools: Git and Visual Studio Code / Kate for writing and sharing code; occasionally [codeshare.io](https://codeshare.io/) and [onlinegdb.com](https://www.onlinegdb.com/online_c_compiler) for brainstorming and online testing.
 
-Beyond Git and Visual Studio Code / Kate as our main tools for code writing and sharing, we occasionally used online collaboration and testing tools for brainstorms, https://codeshare.io/ and https://www.onlinegdb.com/online_c_compiler respectively.
-
-### Acknowledgments
+## Acknowledgments
 
 - Holberton School for the project guidelines
-- Betty style guide contributors
-- All peer reviewers and testers
+- All peer reviewers and testers: Barat Erwan, Lacôte Laurent, Lages Yoann
 
 ## Technologies Used
 
-FIXME
-
-<p align="left">
-    <img src="https://img.shields.io/badge/C-a8b9cc?logo=&logoColor=black&style=for-the-badge" alt="C badge">
-    <img src="https://img.shields.io/badge/GIT-f05032?logo=git&logoColor=white&style=for-the-badge" alt="Git badge">
-    <img src="https://img.shields.io/badge/GITHUB-181717?logo=github&logoColor=white&style=for-the-badge" alt="GitHub badge">
-    <img src="https://img.shields.io/badge/VALGRIND-purple?logo=v&logoColor=white&style=for-the-badge" alt="Valgrind badge">
-    <img src="https://img.shields.io/badge/VIM-019733?logo=vim&logoColor=white&style=for-the-badge" alt="VIM badge">
-    <img src="https://img.shields.io/badge/KDE-blue?logo=kde&logoColor=white&style=for-the-badge" alt="KDE badge">
-</p>
+- Python
+- FastAPI
+- FastMCP
+- HttpX
+- SQLAlchemy
+- MiniMax 3 (AI agent)
+- MariaDB
+- Docker / Docker Compose
+- Git / GitHub
 
 
 ## Authors
 
-- **Laurent Lacôte** - [GitHub](https://github.com/llacote-holberton)
-- **Yoann Lages** - [GitHub](https://github.com/Yo13038)
+- Lacôte Laurent - [GitHub](https://github.com/llacote-holberton)
+- Lages Yoann - [GitHub](https://github.com/Yo13038)
 
 ## License
 
-This project is part of the Holberton School curriculum and is made available under the General Public License v3.0, confer [License text](./LICENSE.md) for details.
-
----
+This project is part of the Holberton School curriculum and is made available under the General Public License v3.0, confer [License text](./LICENSE.md) for details
