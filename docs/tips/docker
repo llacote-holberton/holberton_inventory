@@ -1,0 +1,34 @@
+# Affiche la "carte d'identité" du serveur docker actuel sur l'hôte
+docker version
+# Liste les containers (-a pour "all")
+docker ps
+# Créée un nouveau container et le lance
+# ATTENTION: ÉCHEC si un container de même nom existe déjà.
+docker run --name <nomducontainer> <nom_machine_image-de-base-a-utiliser-pour-lui>
+# Démarre un container déjà existant
+docker start
+# Stoppe un container déjà existant
+docker stop
+# Consulte les logs relatif à un container
+docker logs <nomducontainer>
+# Lance un terminal bash "à l'intérieur du container"
+docker exec -it <nomducontainer> bash
+# Liste les variables d'environnement injectées dans le container
+docker inspect <nomducontainer> --format '{{range .Config.Env}}{{println .}}{{end}}'
+# SPECIFIQUE IMAGES AVEC MARIADB INSTALLÉ
+# Ouvre une connexion à l'interface en ligne de commande de gestion de MariaDB à l'intérieur du container
+docker exec -it <nomducontainer> mariadb -u root -p
+
+
+# ============= DOCKER COMPOSE ================
+# Stoppe les containers, l'option -v supprime aussi les volumes déclarers
+docker compose down -v --remove-orphans
+# Choisit un ou plusieurs fichiers compose à combiner, 
+# Si collision de nom sur services/variables version du fichier N+1 écrase les valeurs du fichier N
+# Utile par exemple pour surcharger des variables d'environnement par défaut avec celles d'un "vrai" env.
+docker compose -f compose.yml -f compose.prod.yml up -d
+# -d is "start in detached mode" avoids having the logs output directly displayed on the terminal
+# Variant controlling the log level
+docker compose --log-level ERROR up -d
+# "Suit" les nouvelles traces de log du service indiqué du docker compose
+docker compose logs -f <servicename>

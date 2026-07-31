@@ -1,0 +1,21 @@
+# Base image
+FROM python:3.14-slim
+
+# Host dir for app inside container
+WORKDIR /app
+
+# Copy "requirements from host fs to workdir in container"
+COPY requirements.txt .
+
+# Exploit it to install all Python libraries.
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the app's files (separated because those may change)
+COPY . .
+
+# Open a port on container
+ENV AI_SERVICE_PORT=8003
+EXPOSE ${AI_SERVICE_PORT}
+
+# Run uvicorn async server targeting "app" object in "front"
+CMD ["sh", "-c", "uvicorn front:app --host 0.0.0.0 --port ${AI_SERVICE_PORT}"]

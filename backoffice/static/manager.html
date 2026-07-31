@@ -1,0 +1,53 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HBntory — Espace Manager</title>
+    <!-- 1. common.js for security and logout (and later dynamic common parts injection) -->
+    <script src="/static/common.js"></script>
+    <link rel="stylesheet" href="/static/manager.css">
+  </head>
+<body>
+  <header class="topbar">
+    <div class="wordmark">HBNTORY</div>
+    <nav class="topnav">
+      <a id="ai-agent-link" href="#" class="nav-accent">Consulter l'Agent IA</a>
+      <button id="logout-btn" class="logout-btn nav-accent">Se déconnecter</button>
+    </nav>
+  </header>
+
+  <main class="page">
+    <!-- Bannière d'identification du manager -->
+    <div id="user-info-banner" class="user-info-banner" style="margin-bottom: 1.5rem; padding: 0.75rem 1rem; background: #f0f4f8; border-radius: 6px; font-size: 0.95rem;">
+      <span>Connecté : <strong id="user-display-name">Chargement…</strong></span>
+      <span style="margin: 0 0.5rem; opacity: 0.4;">|</span>
+      <span>Branche : <strong id="branch-display-name">Chargement…</strong></span>
+    </div>
+
+    <h1>Stock - Gestion de ma branche</h1>
+
+    <section class="ticket">
+      <p class="ticket-label">Ajouter un produit au stock</p>
+      <form id="new-stock-form" class="inline-form">
+        <input type="text" id="new-product-id" placeholder="Identifiant ou SKU du produit" required>
+        <input type="number" id="new-product-qty" min="1" value="1" required>
+        <button type="submit" class="add">Ajouter au stock</button>
+      </form>
+    </section>
+
+    <h2 class="section-title">Stock actuel</h2>
+    <div id="stock-list" class="stock-list">
+      <p class="placeholder">Chargement du stock…</p>
+    </div>
+  </main>
+
+  <footer class="footbar">
+    <span>© 2026 HBntory</span>
+    <a href="#">Legal</a>
+  </footer>
+
+  <script src="/static/manager.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+# Docker image with Python preinstalled
+FROM python:3.14-slim
+
+# Defining a directory for app inside the container.
+WORKDIR /app
+
+# Copying and installing dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copying required files in n steps (for layered cache)
+# Everything related to database
+COPY database.py db_models.py crud.py ./
+# Everything related to internal_api
+COPY api_models.py internal_api.py ./
+# Related tests files
+COPY tests/test_internal_api.py ./tests/
+
+# Setting a command to be runned automatically when container starts
+CMD ["sh", "-c", "uvicorn internal_api:app --host 0.0.0.0 --port ${INTERNAL_API_PORT:-8002}"]

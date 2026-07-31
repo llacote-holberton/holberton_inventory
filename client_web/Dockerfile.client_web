@@ -1,0 +1,24 @@
+# Base image
+FROM python:3.14-slim
+
+# Host dir for app inside container
+WORKDIR /app
+
+# Copy "requirements from host fs to workdir in container"
+COPY requirements.txt .
+
+# Exploit it to install all Python libraries.
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the app's files (separated because those may change)
+COPY . .
+
+# Make Python logs appear instantly in Docker compose logs
+ENV PYTHONUNBUFFERED=1
+
+# Open a port on container
+ENV CLIENT_PORT=8080
+EXPOSE ${CLIENT_PORT}
+
+# Run uvicorn async server targeting "app" object in "front"
+CMD ["sh", "-c", "uvicorn client_web:app --host 0.0.0.0 --port ${CLIENT_PORT}"]
