@@ -330,3 +330,48 @@ Given example to show Server-Sent Events: adding amount to an existing stock (tr
 ```
 
 </details>
+
+
+### Python components's dependencies
+
+Hereunder is the shortlist of Python libraries used by each custom component.
+Please note that this list only provides a "high-level, abstract" view (no precise version, no dependencies).
+For a detailed view you can look inside each component's folder, you'll find...
+- requirements.in which list the "core libraries" with target versions specified for the production release (change at your own risk).
+- requirements.txt which present the fully detailed listing of all "python packages" required in the end, generated with the command  
+  `pip-compile requirements.in -o requirements.txt`
+
+NOTE: the MCP server component REQUIRES a version of `mcp` strictly inferior to 2.0, as this major release brings breaking changes and our app's code has been written for 1.x version.
+
+#### Python libraries <-> Docker services mapping
+
+| Library name     | Short description                                          | App component(s) (Docker service name)            |
+|------------------|------------------------------------------------------------|---------------------------------------------------|
+| python-dotenv    | Small utility to parse local env files (.env)              | *ALL*                                             |
+| pytest           | Python's testing framework                                 | *ALL*                                             |
+| httpx2           | HTTP client used by Pytest for API tests                   | *ALL*                                             |
+| fastapi          | Engine to define and expose HTTP APIs                      | backoffice, internal-api, ai-service, web-client  |
+| uvicorn          | HTTP Server able to manage asynchronous apps               | backoffice, internal-api, ai-service, web-client  |
+| pydantic         | Framework to easily define reliable Data Transfer Objects  | backoffice, internal-api, mcp-server              |
+| sqlalchemy       | ORM engine to abstract Python <-> database interactions    | backoffice, internal-api                          |
+| pymysql          | Driver to bridge MariaDB with SQLAlchemy                   | backoffice, internal-api                          |
+| bcrypt           | Hashing utility to store passwords securely                | backoffice, internal-api                          |
+| pyjwt            | Utility to manage JSON Web Tokens for user authentication  | backoffice                                        |
+| google-adk[mcp]  | Framework to define LLM agents in an agnostic way          | ai-service                                        |
+| litellm          | Tool to define LLM model-agnostic instructions / calls     | ai_service                                        |
+| fastmcp          | Tool to create a Model Context Protocol server             | mcp-server                                        |
+| mcp              | MCP server engine                                          | mcp-server                                        |
+| httpx            | Used by mcp-server internally to request Internal API      | mcp-server                                        |
+
+
+#### Docker services <-> folder mapping
+
+Listing only Python components, to know where to find their respective `requirements.in` / `requirements.txt`
+
+| Docker service     | Component's source repository   |
+|--------------------|---------------------------------|
+| backoffice         |`./backoffice`                   |
+| internal-api       |`./backoffice`                   |
+| mcp-server         |`./product_mcp_server`           |
+| ai-service         |`./ai_service`                   |
+| web-client         |`./client_web `                  |
