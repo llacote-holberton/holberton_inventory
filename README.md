@@ -188,10 +188,32 @@ Once the containers are running, the application is accessible via:
 On the Frontoffice side, the customer submits a request through the FrontOffice; it is forwarded to the AI Service, which relies on an agent (MiniMax 3) querying an MCP server to fetch produc
 t/stock information from the BackOffice and the external product API, then returns a response to the customer.
 
-On the BackOffice side, internal users manage stock (CRUD) via the HTML interface or the dedicated REST API, with real-time updates pushed to other sessions via Serve
-r-Sent Events.
+<details><summary>Client UI sneak peek</summary>
+<p align="center">
+  <img src="docs/screenshots/Client__Case-1a_Query-single-product-by-id.png"
+       alt="Client UI after having a question answered"
+       width="800">
+</p>
+</details>
 
 For concrete examples, see [Examples of use](#examples-of-use).
+
+On the BackOffice side, Admin takes care of creating Managers and assigning them to a branch, then those Managers manage stock (CRUD) via the HTML interface or the dedicated REST API, with real-time updates pushed to other sessions via Server-Sent Events.
+
+As the interface is pretty much self-explanatory, examples are not provided, discover and enjoy it by yourself!
+Just note two important limitations: per business requirements users and branches cannot be deleted from interface, you'll need someone who knows how to write SQL instructions through mariadb utility.
+
+<details><summary>Client UI sneak peek</summary>
+
+<p align="center">
+  <img src="docs/screenshots/Back__Admin-overview.png" alt="Admin UI upon login" width="48%">
+  <img src="docs/screenshots/Back__Manager-overview.png" alt="Manager UI upon login" width="48%">
+</p>
+
+
+</details>
+
+
 
 ## Features and limitations
 
