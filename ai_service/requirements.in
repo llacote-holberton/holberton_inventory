@@ -1,0 +1,13 @@
+# Python framework to quickly set up API exposable through HTTP
+fastapi==0.141.1
+# Async HTTP server to expose aforementioned apis.
+uvicorn[standard]==0.52.1
+# Frameworks to set up AI Agents in agnostic way
+#   (can change model on the fly, same process)
+google-adk[mcp]==2.6.3
+litellm==1.96.0
+# Used to exploit environment variables
+python-dotenv==1.2.2
+# Used for minimal python-driven tests
+pytest==9.1.1
+httpx2==2.10.0

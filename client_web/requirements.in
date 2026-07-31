@@ -1,0 +1,9 @@
+# USed to exploit local environment variables
+python-dotenv==1.2.2
+# Used to serve an HTTP server with API support
+#   (for now just used for healthchecks)
+fastapi==0.141.1
+uvicorn[standard]==0.52.1
+# Libraries for testing
+pytest==9.1.1
+httpx2==2.10.0
