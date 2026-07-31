@@ -1,7 +1,8 @@
 # Essential to make app configurable using environment variables defined in a local file.
 python-dotenv
 # Base library to expose a Model Context Protocol Server
-mcp[cli]>=1.6.0
+# Adding upper bound to avoid major non-retro-compatible update published end 2026 July
+mcp[cli]>=1.6.0,<2.0.0
 # Required for MCP Server to make request to the Internal (Stock) API
 httpx>=0.27.0
 # Used to simplify and strengthen the manipulation of business data
