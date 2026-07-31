@@ -1,0 +1,20 @@
+# --- Web Frameworks ---
+# To make an app defining APIs
+fastapi==0.141.1
+# To run above-mentioned app as asynchronous server
+uvicorn[standard]==0.52.1
+# Used to define Data Transfer Objects to simplify exchanges.
+pydantic==2.13.4
+# To define CRUD operations on database in agnostic way
+sqlalchemy==2.0.51
+# To bridge aforementioned with the specific SQL engine chosen (MariaDB)
+pymysql==1.2.0
+# Essential to make app configurable using environment variables defined in a local file.
+python-dotenv==1.2.2
+# Used (for now) to secure the user passwords by hashing them (may be replaced by argon2id).
+bcrypt==5.0.0
+# Used in context of Backoffice API to allow HTTP token based user authentication
+pyjwt==2.13.0
+# First is a simple, lightweight testing framework which requires the second to make requests.
+pytest==9.1.1
+httpx2==2.10.0

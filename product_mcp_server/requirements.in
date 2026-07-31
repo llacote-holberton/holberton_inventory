@@ -1,0 +1,12 @@
+# Essential to make app configurable using environment variables defined in a local file.
+python-dotenv==1.2.2
+# Base library to expose a Model Context Protocol Server
+# Adding upper bound to avoid major non-retro-compatible update published end 2026 July
+mcp[cli]>=1.6.0,<2.0.0
+# Required for MCP Server to make request to the Internal (Stock) API
+httpx==0.28.1
+# Used to simplify and strengthen the manipulation of business data
+pydantic==2.13.4
+# Used for isolated tests
+pytest==9.1.1
+httpx2==2.10.0
