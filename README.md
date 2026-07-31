@@ -88,11 +88,6 @@ As this project was built under tight time constraints and with a pedagogical fo
 - Product catalog lookup via a containerized external API
 
 
-
-## Accessible help
-
-(optional built-in documentation)*
-
 ### General architecture
 
 The project is built around three main components:
